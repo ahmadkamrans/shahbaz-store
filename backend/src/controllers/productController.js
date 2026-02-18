@@ -1,0 +1,627 @@
+import Product from '../models/Product.js';
+import Review from '../models/Review.js';
+import Analytics from '../models/Analytics.js';
+import User from '../models/User.js';
+import { AppError } from '../utils/errors.js';
+import { isValidObjectId, getPaginationParams, safeNumber } from '../utils/helpers.js';
+import { validateQueryParams } from '../utils/validators.js';
+import { searchProducts as elasticsearchSearch, indexProduct, updateProductIndex, deleteProductIndex } from '../services/elasticsearchService.js';
+
+export const getProducts = async (req, res, next) => {
+  try {
+    const {
+      category,
+      search,
+      minPrice,
+      maxPrice,
+      minRating,
+      inStock,
+      featured,
+      tags,
+      sortBy,
+      sortOrder
+    } = req.query;
+
+    // Validate and sanitize price filters
+    const validatedMinPrice = safeNumber(minPrice, null, 0);
+    const validatedMaxPrice = safeNumber(maxPrice, null, 0);
+    
+    // Validate price range
+    if (validatedMinPrice !== null && validatedMaxPrice !== null && validatedMinPrice > validatedMaxPrice) {
+      throw new AppError('Minimum price cannot be greater than maximum price', 400);
+    }
+
+    // Validate category ID
+    if (category && !isValidObjectId(category)) {
+      throw new AppError('Invalid category ID format', 400);
+    }
+
+    // Validate sortBy and sortOrder
+    const allowedSortFields = ['createdAt', 'name', 'price', 'averageRating', 'viewCount'];
+    const validatedSortBy = validateQueryParams.sortBy(sortBy, allowedSortFields, 'createdAt');
+    const validatedSortOrder = validateQueryParams.sortOrder(sortOrder, 'desc');
+
+    // Validate pagination
+    const { page, limit } = getPaginationParams(req.query, 12, 100);
+
+    // Use Elasticsearch if search query is provided and Elasticsearch is enabled
+    const useElasticsearch = search && search.trim() && process.env.ELASTICSEARCH_ENABLED === 'true';
+    
+    let products = [];
+    let total = 0;
+
+    if (useElasticsearch) {
+      try {
+        // Use Elasticsearch for search
+        const tagArray = tags ? (Array.isArray(tags) ? tags : [tags]) : [];
+        const searchResult = await elasticsearchSearch({
+          search: search.trim(),
+          category,
+          minPrice: validatedMinPrice,
+          maxPrice: validatedMaxPrice,
+          minRating: safeNumber(minRating, null, 0, 5),
+          inStock,
+          featured: featured === 'true',
+          tags: tagArray,
+          sortBy: validatedSortBy,
+          sortOrder: validatedSortOrder,
+          page,
+          limit
+        });
+
+        // Get full product documents from MongoDB using IDs from Elasticsearch
+        const productIds = searchResult.products.map(p => p.id || p._id);
+        if (productIds.length > 0) {
+          const mongoProducts = await Product.find({
+            _id: { $in: productIds },
+            isActive: true
+          })
+            .populate('category', 'name slug')
+            .lean();
+
+          // Maintain Elasticsearch result order
+          const productMap = new Map(mongoProducts.map(p => [p._id.toString(), p]));
+          products = productIds
+            .map(id => productMap.get(id.toString()))
+            .filter(p => p !== undefined);
+        }
+
+        total = searchResult.total;
+      } catch (elasticsearchError) {
+        console.error('Elasticsearch error, falling back to MongoDB:', elasticsearchError);
+        // Fall through to MongoDB search
+      }
+    }
+
+    // Use MongoDB if Elasticsearch is not used or failed
+    if (!useElasticsearch || products.length === 0) {
+      const query = { isActive: true };
+
+      if (category) {
+        query.category = category;
+      }
+
+      if (featured === 'true') query.featured = true;
+      
+      if (validatedMinPrice !== null || validatedMaxPrice !== null) {
+        query.price = {};
+        if (validatedMinPrice !== null) query.price.$gte = validatedMinPrice;
+        if (validatedMaxPrice !== null) query.price.$lte = validatedMaxPrice;
+      }
+      
+      const validatedMinRating = safeNumber(minRating, null, 0, 5);
+      if (validatedMinRating !== null) {
+        query.averageRating = { $gte: validatedMinRating };
+      }
+      
+      if (inStock === 'true') {
+        query.$or = [
+          { stock: { $gt: 0 } },
+          { 'variants': { $exists: true, $ne: new Map() } }
+        ];
+      }
+
+      if (tags) {
+        const tagArray = Array.isArray(tags) ? tags : [tags];
+        query.tags = { $in: tagArray };
+      }
+
+      if (search) {
+        // Sanitize search query to prevent regex injection
+        const sanitizedSearch = search.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        query.$or = [
+          { name: { $regex: sanitizedSearch, $options: 'i' } },
+          { description: { $regex: sanitizedSearch, $options: 'i' } },
+          { tags: { $in: [new RegExp(sanitizedSearch, 'i')] } }
+        ];
+      }
+
+      const sortOptions = {};
+      sortOptions[validatedSortBy] = validatedSortOrder === 'asc' ? 1 : -1;
+
+      const skip = (page - 1) * limit;
+
+      products = await Product.find(query)
+        .populate('category', 'name slug')
+        .sort(sortOptions)
+        .skip(skip)
+        .limit(limit);
+
+      total = await Product.countDocuments(query);
+    }
+
+    // Track search analytics
+    if (search) {
+      await Analytics.create({
+        eventType: 'search',
+        metadata: { query: search, resultsCount: total, usedElasticsearch: useElasticsearch },
+        user: req.user?._id
+      });
+    }
+
+    res.json({
+      success: true,
+      products,
+      pagination: {
+        page,
+        limit,
+        total,
+        pages: Math.ceil(total / limit)
+      }
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const getProduct = async (req, res, next) => {
+  try {
+    const product = await Product.findOne({ 
+      $or: [
+        { _id: req.params.id },
+        { slug: req.params.id }
+      ],
+      isActive: true
+    })
+      .populate('category', 'name slug')
+      .populate('relatedProducts', 'name slug price images averageRating');
+
+    if (!product) {
+      throw new AppError('Product not found', 404);
+    }
+
+    // Increment view count
+    product.viewCount += 1;
+    await product.save();
+
+    // Track product view
+    await Analytics.create({
+      eventType: 'product_view',
+      product: product._id,
+      category: product.category._id,
+      user: req.user?._id
+    });
+
+    // Add to recently viewed if user is authenticated
+    if (req.user) {
+      try {
+        const user = await User.findById(req.user._id);
+        if (user) {
+          user.recentlyViewed = user.recentlyViewed.filter(
+            item => item.product.toString() !== product._id.toString()
+          );
+          user.recentlyViewed.unshift({
+            product: product._id,
+            viewedAt: new Date()
+          });
+          if (user.recentlyViewed.length > 20) {
+            user.recentlyViewed = user.recentlyViewed.slice(0, 20);
+          }
+          await user.save();
+        }
+      } catch (err) {
+        console.error('Error updating recently viewed:', err);
+      }
+    }
+
+    res.json({
+      success: true,
+      product
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const createProduct = async (req, res, next) => {
+  try {
+    const productData = { ...req.body };
+    
+    // Handle variants if provided
+    if (productData.variants) {
+      const variantsMap = new Map();
+      if (typeof productData.variants === 'string') {
+        try {
+          productData.variants = JSON.parse(productData.variants);
+        } catch (parseError) {
+          throw new AppError('Invalid variants JSON format', 400);
+        }
+      }
+      Object.entries(productData.variants).forEach(([key, value]) => {
+        variantsMap.set(key, value);
+      });
+      productData.variants = variantsMap;
+    }
+
+    // Handle images
+    if (req.files && req.files.length > 0) {
+      productData.images = req.files.map(file => `/uploads/products/${file.filename}`);
+    }
+
+    const product = await Product.create(productData);
+    
+    // Populate category for indexing
+    await product.populate('category', 'name slug');
+
+    // Index in Elasticsearch if enabled
+    if (process.env.ELASTICSEARCH_ENABLED === 'true') {
+      try {
+        await indexProduct(product);
+      } catch (indexError) {
+        console.error('Error indexing product in Elasticsearch:', indexError);
+        // Don't fail the request if indexing fails
+      }
+    }
+
+    res.status(201).json({
+      success: true,
+      product
+    });
+  } catch (error) {
+    if (error.code === 11000) {
+      if (error.keyPattern?.barcode) {
+        return next(new AppError('Product with this barcode already exists', 400));
+      }
+      return next(new AppError('Product with this slug or SKU already exists', 400));
+    }
+    // Handle barcode generation errors
+    if (error.message && error.message.includes('barcode')) {
+      return next(new AppError(error.message, 400));
+    }
+    next(error);
+  }
+};
+
+export const updateProduct = async (req, res, next) => {
+  try {
+    if (!isValidObjectId(req.params.id)) {
+      throw new AppError('Invalid product ID format', 400);
+    }
+
+    const product = await Product.findById(req.params.id);
+    if (!product) {
+      throw new AppError('Product not found', 404);
+    }
+
+    const updateData = { ...req.body };
+
+    // Handle variants
+    if (updateData.variants) {
+      const variantsMap = new Map();
+      if (typeof updateData.variants === 'string') {
+        try {
+          updateData.variants = JSON.parse(updateData.variants);
+        } catch (parseError) {
+          throw new AppError('Invalid variants JSON format', 400);
+        }
+      }
+      Object.entries(updateData.variants).forEach(([key, value]) => {
+        variantsMap.set(key, value);
+      });
+      updateData.variants = variantsMap;
+    }
+
+    // Handle new images
+    if (req.files && req.files.length > 0) {
+      const newImages = req.files.map(file => `/uploads/products/${file.filename}`);
+      updateData.images = [...(product.images || []), ...newImages];
+    }
+
+    Object.assign(product, updateData);
+    await product.save();
+    
+    // Populate category for indexing
+    await product.populate('category', 'name slug');
+
+    // Update index in Elasticsearch if enabled
+    if (process.env.ELASTICSEARCH_ENABLED === 'true') {
+      try {
+        await updateProductIndex(product);
+      } catch (indexError) {
+        console.error('Error updating product index in Elasticsearch:', indexError);
+        // Don't fail the request if indexing fails
+      }
+    }
+
+    res.json({
+      success: true,
+      product
+    });
+  } catch (error) {
+    if (error.code === 11000) {
+      if (error.keyPattern?.barcode) {
+        return next(new AppError('Product with this barcode already exists', 400));
+      }
+      return next(new AppError('Product with this slug or SKU already exists', 400));
+    }
+    // Handle barcode generation errors
+    if (error.message && error.message.includes('barcode')) {
+      return next(new AppError(error.message, 400));
+    }
+    next(error);
+  }
+};
+
+export const deleteProduct = async (req, res, next) => {
+  try {
+    if (!isValidObjectId(req.params.id)) {
+      throw new AppError('Invalid product ID format', 400);
+    }
+
+    const product = await Product.findById(req.params.id);
+    if (!product) {
+      throw new AppError('Product not found', 404);
+    }
+
+    const productId = product._id;
+    await product.deleteOne();
+
+    // Delete from Elasticsearch index if enabled
+    if (process.env.ELASTICSEARCH_ENABLED === 'true') {
+      try {
+        await deleteProductIndex(productId);
+      } catch (indexError) {
+        console.error('Error deleting product from Elasticsearch index:', indexError);
+        // Don't fail the request if deletion from index fails
+      }
+    }
+
+    res.json({
+      success: true,
+      message: 'Product deleted successfully'
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const getRelatedProducts = async (req, res, next) => {
+  try {
+    if (!isValidObjectId(req.params.id)) {
+      throw new AppError('Invalid product ID format', 400);
+    }
+
+    const product = await Product.findById(req.params.id);
+    if (!product) {
+      throw new AppError('Product not found', 404);
+    }
+
+    // Get manually assigned related products first
+    let related = [];
+    if (product.relatedProducts && product.relatedProducts.length > 0) {
+      related = await Product.find({
+        _id: { $in: product.relatedProducts },
+        isActive: true
+      })
+        .limit(8)
+        .select('name slug price images averageRating');
+    }
+
+    // If not enough, get from same category
+    if (related.length < 8) {
+      const sameCategory = await Product.find({
+        category: product.category,
+        _id: { $ne: product._id, $nin: related.map(p => p._id) },
+        isActive: true
+      })
+        .limit(8 - related.length)
+        .select('name slug price images averageRating');
+      
+      related = [...related, ...sameCategory];
+    }
+
+    res.json({
+      success: true,
+      products: related
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const getPopularProducts = async (req, res, next) => {
+  try {
+    const products = await Product.find({ isActive: true })
+      .sort({ viewCount: -1, averageRating: -1 })
+      .limit(10)
+      .select('name slug price images averageRating viewCount');
+
+    res.json({
+      success: true,
+      products
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const getShareData = async (req, res, next) => {
+  try {
+    const product = await Product.findOne({
+      $or: [
+        { _id: req.params.id },
+        { slug: req.params.id }
+      ],
+      isActive: true
+    }).select('name description images metaTitle metaDescription');
+
+    if (!product) {
+      throw new AppError('Product not found', 404);
+    }
+
+    const baseUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+    const productUrl = `${baseUrl}/products/${product.slug || product._id}`;
+
+    res.json({
+      success: true,
+      shareData: {
+        title: product.metaTitle || product.name,
+        description: product.metaDescription || product.description,
+        image: product.images && product.images.length > 0 ? product.images[0] : null,
+        url: productUrl
+      }
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const getProductsForComparison = async (req, res, next) => {
+  try {
+    const { ids } = req.query;
+    
+    if (!ids) {
+      throw new AppError('Product IDs are required', 400);
+    }
+
+    const productIds = Array.isArray(ids) ? ids : ids.split(',');
+    
+    if (productIds.length > 4) {
+      throw new AppError('Maximum 4 products can be compared', 400);
+    }
+
+    // Validate all product IDs
+    for (const id of productIds) {
+      if (!isValidObjectId(id)) {
+        throw new AppError(`Invalid product ID format: ${id}`, 400);
+      }
+    }
+
+    const products = await Product.find({
+      _id: { $in: productIds },
+      isActive: true
+    })
+      .populate('category', 'name')
+      .select('name description price images averageRating stock variants tags');
+
+    res.json({
+      success: true,
+      products
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const getProductByBarcode = async (req, res, next) => {
+  try {
+    const { barcode } = req.params;
+    
+    if (!barcode) {
+      throw new AppError('Barcode is required', 400);
+    }
+
+    const normalizedBarcode = barcode.toUpperCase().trim();
+
+    // First, try to find product by barcode
+    let product = await Product.findOne({ 
+      barcode: normalizedBarcode,
+      isActive: true
+    })
+      .populate('category', 'name slug');
+
+    // If not found, search in variants
+    // Since variants is stored as a Map, we need to iterate through products
+    // But we'll use a cursor with early termination for better performance
+    if (!product) {
+      const productsCursor = Product.find({
+        isActive: true,
+        variants: { $exists: true, $ne: new Map() }
+      })
+        .populate('category', 'name slug')
+        .cursor();
+
+      // Use cursor to iterate and break early when found
+      try {
+        for await (const prod of productsCursor) {
+          if (prod.variants && prod.variants.size > 0) {
+            for (const [variantType, variantArray] of prod.variants.entries()) {
+              const variant = variantArray.find(v => v.barcode === normalizedBarcode);
+              if (variant) {
+                product = prod;
+                break;
+              }
+            }
+            if (product) {
+              break;
+            }
+          }
+        }
+      } finally {
+        // Ensure cursor is closed even if there's an error
+        if (productsCursor && typeof productsCursor.close === 'function') {
+          try {
+            await productsCursor.close();
+          } catch (closeError) {
+            // Ignore close errors
+          }
+        }
+      }
+    }
+
+    if (!product) {
+      throw new AppError('Product not found with this barcode', 404);
+    }
+
+    // Increment view count
+    product.viewCount += 1;
+    await product.save();
+
+    // Track product view
+    await Analytics.create({
+      eventType: 'product_view',
+      product: product._id,
+      category: product.category._id,
+      user: req.user?._id
+    });
+
+    // Add to recently viewed if user is authenticated
+    if (req.user) {
+      try {
+        const user = await User.findById(req.user._id);
+        if (user) {
+          user.recentlyViewed = user.recentlyViewed.filter(
+            item => item.product.toString() !== product._id.toString()
+          );
+          user.recentlyViewed.unshift({
+            product: product._id,
+            viewedAt: new Date()
+          });
+          if (user.recentlyViewed.length > 20) {
+            user.recentlyViewed = user.recentlyViewed.slice(0, 20);
+          }
+          await user.save();
+        }
+      } catch (err) {
+        console.error('Error updating recently viewed:', err);
+      }
+    }
+
+    res.json({
+      success: true,
+      product
+    });
+  } catch (error) {
+    next(error);
+  }
+};
