@@ -22,28 +22,50 @@ export default function WishlistPage() {
 
   return (
     <main className="main">
-      <div className="page-header">
-        <div className="container d-flex flex-column align-items-center">
-          <nav aria-label="breadcrumb" className="breadcrumb-nav">
-            <div className="container">
-              <ol className="breadcrumb">
-                <li className="breadcrumb-item">
-                  <Link href="/">
-                    <i className="icon-home"></i>
-                  </Link>
-                </li>
-                <li className="breadcrumb-item active" aria-current="page">
-                  Wishlist
-                </li>
-              </ol>
+      <div className="category-banner-container bg-gray">
+        <div
+          className="category-banner banner text-uppercase"
+          style={{
+            background:
+              "no-repeat 60%/cover url('/assets/images/banners/banner-top.jpg')",
+          }}
+        >
+          <div className="container position-relative">
+            <div className="row">
+              <div className="pl-lg-5 pb-5 pb-md-0 col-md-5 col-xl-4 col-lg-4 offset-1">
+                <h3>
+                  My<br></br>Wishlist
+                </h3>
+                <Link href="/products" className="btn btn-dark">
+                  Shop Now
+                </Link>
+              </div>
+              <div className="pl-lg-3 col-md-4 offset-md-0 offset-1 pt-3">
+                <div className="coupon-sale-content">
+                  <h4 className="m-b-1 coupon-sale-text bg-white text-transform-none">
+                    Saved for Later
+                  </h4>
+                </div>
+              </div>
             </div>
-          </nav>
-
-          <h1>Wishlist</h1>
+          </div>
         </div>
       </div>
 
       <div className="container">
+        <nav aria-label="breadcrumb" className="breadcrumb-nav">
+          <ol className="breadcrumb">
+            <li className="breadcrumb-item">
+              <Link href="/">
+                <i className="icon-home"></i>
+              </Link>
+            </li>
+            <li className="breadcrumb-item active" aria-current="page">
+              Wishlist
+            </li>
+          </ol>
+        </nav>
+
         <div className="wishlist-title">
           <h2 className="p-2">My wishlist on Porto Shop 4</h2>
         </div>
@@ -73,7 +95,10 @@ export default function WishlistPage() {
                   <tr key={product.id} className="product-row">
                     <td>
                       <figure className="product-image-container">
-                        <Link href={`/product/${product.id}`} className="product-image">
+                        <Link
+                          href={`/product/${product.id}`}
+                          className="product-image"
+                        >
                           <Image
                             src={product.image}
                             alt={product.name}
@@ -91,13 +116,17 @@ export default function WishlistPage() {
                     </td>
                     <td>
                       <h5 className="product-title">
-                        <Link href={`/product/${product.id}`}>{product.name}</Link>
+                        <Link href={`/product/${product.id}`}>
+                          {product.name}
+                        </Link>
                       </h5>
                     </td>
                     <td className="price-box">${product.price.toFixed(2)}</td>
                     <td>
                       <span className="stock-status">
-                        {product.inStock !== false ? "In stock" : "Out of stock"}
+                        {product.inStock !== false
+                          ? "In stock"
+                          : "Out of stock"}
                       </span>
                     </td>
                     <td className="action">

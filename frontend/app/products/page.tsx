@@ -36,20 +36,20 @@ export default function ProductsPage() {
             <div className="row">
               <div className="pl-lg-5 pb-5 pb-md-0 col-md-5 col-xl-4 col-lg-4 offset-1">
                 <h3>
-                  Electronic<br></br>Deals
+                  All<br></br>Products
                 </h3>
                 <Link href="/products" className="btn btn-dark">
-                  Get Yours!
+                  Shop Now
                 </Link>
               </div>
               <div className="pl-lg-3 col-md-4 offset-md-0 offset-1 pt-3">
                 <div className="coupon-sale-content">
                   <h4 className="m-b-1 coupon-sale-text bg-white text-transform-none">
-                    Exclusive COUPON
+                    Browse Collection
                   </h4>
                   <h5 className="mb-2 coupon-sale-text d-block ls-10 p-0">
-                    <i className="ls-0">UP TO</i>
-                    <b className="text-dark">$100</b> OFF
+                    <i className="ls-0">Discover</i>
+                    <b className="text-dark"> great deals</b>
                   </h5>
                 </div>
               </div>
