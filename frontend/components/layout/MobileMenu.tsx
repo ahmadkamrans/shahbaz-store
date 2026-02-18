@@ -225,7 +225,7 @@ export function MobileMenu({ isOpen, onClose }: MobileMenuProps) {
                   target="_blank"
                   rel="noopener noreferrer"
                 >
-                  Buy Porto!
+                  Shop Shahbaz
                   <span className="tip tip-hot">Hot</span>
                 </a>
               </li>

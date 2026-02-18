@@ -5,8 +5,8 @@ import { WebFontLoader } from "./webfont-loader";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Porto - Bootstrap eCommerce Template",
-  description: "Porto - Bootstrap eCommerce Template",
+  title: "Shahbaz - eCommerce Store",
+  description: "Shahbaz - eCommerce Store",
   keywords: "HTML5 Template",
   authors: [{ name: "SW-THEMES" }],
 };

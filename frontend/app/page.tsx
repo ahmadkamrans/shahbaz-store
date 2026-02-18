@@ -518,7 +518,7 @@ export default function HomePage() {
                     href="#"
                     className="with-icon mr-sm-auto ml-4 mr-4 ml-sm-0"
                   >
-                    @PORTODECOR<i className="fas fa-long-arrow-alt-right"></i>
+                    @SHAHBAZ<i className="fas fa-long-arrow-alt-right"></i>
                   </a>
                 </div>
                 <div className="row row-sm">

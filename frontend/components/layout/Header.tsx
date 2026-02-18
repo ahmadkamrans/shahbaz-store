@@ -112,7 +112,7 @@ export function Header() {
               src="/assets/images/logo-black.png"
               width={180}
               height={72}
-              alt="Porto Logo"
+              alt="Shahbaz"
             />
           </Link>
 
@@ -138,7 +138,7 @@ export function Header() {
       <div className="container">
         <div className="header-bottom w-100">
           <h4 className="mb-0 text-center pr-3 pl-3">
-            Get 10% OFF at the Porto Kitchen Selection -{' '}
+            Get 10% OFF at the Shahbaz Kitchen Selection -{' '}
             <Link href="/products">Shop Now!</Link>
           </h4>
         </div>

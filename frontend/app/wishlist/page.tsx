@@ -67,7 +67,7 @@ export default function WishlistPage() {
         </nav>
 
         <div className="wishlist-title">
-          <h2 className="p-2">My wishlist on Porto Shop 4</h2>
+          <h2 className="p-2">My wishlist on Shahbaz</h2>
         </div>
         <div className="wishlist-table-container">
           <table className="table table-wishlist mb-0">

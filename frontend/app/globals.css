@@ -19,6 +19,13 @@
   max-height: 72px;
 }
 
+/* Footer: larger logo (theme sets .logo-footer img max-width: 115px) */
+.logo-footer img {
+  max-width: 180px !important;
+  width: auto;
+  height: auto;
+}
+
 /* Global styles */
 body {
   font-family: 'Open Sans', 'Poppins', Arial, Helvetica, sans-serif;

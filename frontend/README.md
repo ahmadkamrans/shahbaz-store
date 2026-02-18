@@ -1,6 +1,6 @@
-# Porto E-commerce - Next.js Conversion
+# Shahbaz Store - Next.js E-commerce
 
-This is a Next.js 14 conversion of the Porto e-commerce HTML template, built with TypeScript and the App Router.
+This is a Next.js 14 e-commerce frontend (based on the Porto HTML template), built with TypeScript and the App Router.
 
 ## Project Structure
 
