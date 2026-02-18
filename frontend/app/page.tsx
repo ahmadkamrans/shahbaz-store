@@ -459,7 +459,7 @@ export default function HomePage() {
 
           <hr />
 
-          <div className="blog-section container mb-4 appear-animate">
+          {/* <div className="blog-section container mb-4 appear-animate">
             <div className="row">
               <div className="col-xl-6 mb-3 mb-xl-0">
                 <div className="section-title d-flex align-items-center mt-1 mb-1">
@@ -552,7 +552,7 @@ export default function HomePage() {
                 </div>
               </div>
             </div>
-          </div>
+          </div> */}
         </div>
       </section>
     </main>
