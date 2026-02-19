@@ -29,8 +29,8 @@ export default function LoginPage() {
                     Login or Register
                   </h4>
                   <h5 className="mb-2 coupon-sale-text d-block ls-10 p-0">
-                    <i className="ls-0">Manage your</i>
-                    <b className="text-dark"> orders</b>
+                    {/* <i className="ls-0">Manage your</i> */}
+                    <b className="text-dark"> products</b>
                   </h5>
                 </div>
               </div>
@@ -92,7 +92,10 @@ export default function LoginPage() {
                         className="custom-control-input"
                         id="lost-password"
                       />
-                      <label className="custom-control-label mb-0" htmlFor="lost-password">
+                      <label
+                        className="custom-control-label mb-0"
+                        htmlFor="lost-password"
+                      >
                         Remember me
                       </label>
                     </div>
@@ -138,7 +141,10 @@ export default function LoginPage() {
                   />
 
                   <div className="form-footer mb-2">
-                    <button type="submit" className="btn btn-dark btn-md w-100 mr-0">
+                    <button
+                      type="submit"
+                      className="btn btn-dark btn-md w-100 mr-0"
+                    >
                       Register
                     </button>
                   </div>

@@ -11780,10 +11780,10 @@ header .separator {
 
 .cart-dropdown .mobile-cart .btn-close {
     position: absolute;
-    left: -4.2rem;
+    left: auto;
     top: 0.7rem;
     font-size: 3.3rem;
-    color: #fff;
+    color: #000;
     font-weight: 300
 }
 
