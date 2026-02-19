@@ -243,3 +243,127 @@ export function getDummyOrders(params?: { page?: number; limit?: number; status?
     pagination: { page, limit, total, pages },
   };
 }
+
+// --- Reviews ---
+export interface DummyReview {
+  id?: string;
+  productId: string;
+  productName: string;
+  customerName: string;
+  customerEmail: string;
+  rating: number;
+  comment: string;
+  status: 'pending' | 'approved';
+  createdAt: string;
+}
+
+const dummyReviewsData: DummyReview[] = [
+  { id: 'rev-1', productId: 'prod-1', productName: 'Classic Oak Entry Door', customerName: 'John Smith', customerEmail: 'john@example.com', rating: 5, comment: 'Excellent quality and fast delivery!', status: 'approved', createdAt: '2025-02-10T14:00:00Z' },
+  { id: 'rev-2', productId: 'prod-3', productName: 'Chrome Basin Mixer', customerName: 'Jane Doe', customerEmail: 'jane@example.com', rating: 4, comment: 'Good value for money.', status: 'pending', createdAt: '2025-02-18T09:00:00Z' },
+  { id: 'rev-3', productId: 'prod-2', productName: 'Red Clay Brick Pack', customerName: 'Bob Wilson', customerEmail: 'bob@example.com', rating: 5, comment: 'Perfect for our project. Will order again.', status: 'pending', createdAt: '2025-02-19T11:30:00Z' },
+];
+
+export function getDummyReviews(): DummyReview[] {
+  return [...dummyReviewsData];
+}
+
+export function setReviewApproved(id: string): void {
+  const r = dummyReviewsData.find((x) => x.id === id);
+  if (r) r.status = 'approved';
+}
+
+// --- Discount Codes ---
+export interface DummyDiscountCode {
+  id?: string;
+  code: string;
+  type: 'percent' | 'fixed';
+  value: number;
+  minOrder?: number;
+  maxUses?: number;
+  usedCount?: number;
+  startDate: string;
+  endDate: string;
+  active: boolean;
+}
+
+const dummyDiscountCodesData: DummyDiscountCode[] = [
+  { id: 'dc-1', code: 'WELCOME10', type: 'percent', value: 10, minOrder: 50, maxUses: 100, usedCount: 23, startDate: '2025-01-01', endDate: '2025-12-31', active: true },
+  { id: 'dc-2', code: 'SAVE20', type: 'fixed', value: 20, minOrder: 100, maxUses: 50, usedCount: 12, startDate: '2025-02-01', endDate: '2025-02-28', active: true },
+  { id: 'dc-3', code: 'OLDCODE', type: 'percent', value: 5, startDate: '2024-01-01', endDate: '2024-12-31', active: false },
+];
+
+export function getDummyDiscountCodes(): DummyDiscountCode[] {
+  return [...dummyDiscountCodesData];
+}
+
+export function addDummyDiscountCode(item: Omit<DummyDiscountCode, 'id'>): DummyDiscountCode {
+  const newItem: DummyDiscountCode = { ...item, id: `dc-${Date.now()}`, usedCount: item.usedCount ?? 0 };
+  dummyDiscountCodesData.push(newItem);
+  return newItem;
+}
+
+export function updateDummyDiscountCode(id: string, updates: Partial<DummyDiscountCode>): DummyDiscountCode | null {
+  const i = dummyDiscountCodesData.findIndex((x) => x.id === id);
+  if (i === -1) return null;
+  dummyDiscountCodesData[i] = { ...dummyDiscountCodesData[i], ...updates };
+  return dummyDiscountCodesData[i];
+}
+
+export function removeDummyDiscountCode(id: string): void {
+  const i = dummyDiscountCodesData.findIndex((x) => x.id === id);
+  if (i !== -1) dummyDiscountCodesData.splice(i, 1);
+}
+
+// --- Header Links (mutable order) ---
+export interface DummyHeaderLink {
+  id?: string;
+  label: string;
+  href: string;
+  order: number;
+}
+
+const dummyHeaderLinksData: DummyHeaderLink[] = [
+  { id: 'hl-1', label: 'Home', href: '/', order: 0 },
+  { id: 'hl-2', label: 'Shop', href: '/shop', order: 1 },
+  { id: 'hl-3', label: 'Categories', href: '/categories', order: 2 },
+  { id: 'hl-4', label: 'About', href: '/about', order: 3 },
+  { id: 'hl-5', label: 'Contact', href: '/contact', order: 4 },
+];
+
+export function getDummyHeaderLinks(): DummyHeaderLink[] {
+  return [...dummyHeaderLinksData].sort((a, b) => a.order - b.order);
+}
+
+export function addDummyHeaderLink(item: Omit<DummyHeaderLink, 'id' | 'order'>): DummyHeaderLink {
+  const maxOrder = Math.max(0, ...dummyHeaderLinksData.map((x) => x.order));
+  const newItem: DummyHeaderLink = { ...item, id: `hl-${Date.now()}`, order: maxOrder + 1 };
+  dummyHeaderLinksData.push(newItem);
+  return newItem;
+}
+
+export function updateDummyHeaderLink(id: string, updates: Partial<DummyHeaderLink>): DummyHeaderLink | null {
+  const i = dummyHeaderLinksData.findIndex((x) => x.id === id);
+  if (i === -1) return null;
+  dummyHeaderLinksData[i] = { ...dummyHeaderLinksData[i], ...updates };
+  return dummyHeaderLinksData[i];
+}
+
+export function removeDummyHeaderLink(id: string): void {
+  const i = dummyHeaderLinksData.findIndex((x) => x.id === id);
+  if (i !== -1) dummyHeaderLinksData.splice(i, 1);
+}
+
+export function reorderDummyHeaderLinks(id: string, direction: 'up' | 'down'): void {
+  const list = getDummyHeaderLinks();
+  const idx = list.findIndex((x) => x.id === id);
+  if (idx === -1) return;
+  if (direction === 'up' && idx > 0) {
+    [list[idx], list[idx - 1]] = [list[idx - 1], list[idx]];
+  } else if (direction === 'down' && idx < list.length - 1) {
+    [list[idx], list[idx + 1]] = [list[idx + 1], list[idx]];
+  }
+  list.forEach((item, i) => {
+    const inData = dummyHeaderLinksData.find((x) => x.id === item.id);
+    if (inData) inData.order = i;
+  });
+}

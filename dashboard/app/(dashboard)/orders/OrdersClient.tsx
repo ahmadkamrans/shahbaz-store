@@ -30,13 +30,16 @@ export default function OrdersClient({
 
   const refreshOrders = () => {
     const params = new URLSearchParams();
-    if (page > 1) params.append('page', page.toString());
-    if (statusFilter) params.append('status', statusFilter);
+    if (page > 1) params.append("page", page.toString());
+    if (statusFilter) params.append("status", statusFilter);
     router.push(`/orders?${params.toString()}`);
     router.refresh();
   };
 
-  const handleStatusUpdate = async (orderId: string, newStatus: Order["status"]) => {
+  const handleStatusUpdate = async (
+    orderId: string,
+    newStatus: Order["status"],
+  ) => {
     try {
       await ordersApi.updateStatus(orderId, newStatus);
       toast.success("Order status updated successfully!");
@@ -46,7 +49,9 @@ export default function OrdersClient({
       }
     } catch (error: any) {
       console.error("Error updating order status:", error);
-      toast.error(error.response?.data?.error || "Failed to update order status");
+      toast.error(
+        error.response?.data?.error || "Failed to update order status",
+      );
     }
   };
 
@@ -54,7 +59,7 @@ export default function OrdersClient({
     setStatusFilter(status);
     setPage(1);
     const params = new URLSearchParams();
-    if (status) params.append('status', status);
+    if (status) params.append("status", status);
     router.push(`/orders?${params.toString()}`);
   };
 
@@ -130,8 +135,12 @@ export default function OrdersClient({
                   {(order._id || order.id)?.toString().substring(0, 8)}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
-                  <div className="text-sm text-gray-900">{order.customerName}</div>
-                  <div className="text-sm text-gray-500">{order.customerEmail}</div>
+                  <div className="text-sm text-gray-900">
+                    {order.customerName}
+                  </div>
+                  <div className="text-sm text-gray-500">
+                    {order.customerEmail}
+                  </div>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                   {order.items.length} item(s)
@@ -142,7 +151,7 @@ export default function OrdersClient({
                 <td className="px-6 py-4 whitespace-nowrap">
                   <span
                     className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getStatusColor(
-                      order.status
+                      order.status,
                     )}`}
                   >
                     {order.status}
@@ -174,8 +183,8 @@ export default function OrdersClient({
               const newPage = Math.max(1, page - 1);
               setPage(newPage);
               const params = new URLSearchParams();
-              if (newPage > 1) params.append('page', newPage.toString());
-              if (statusFilter) params.append('status', statusFilter);
+              if (newPage > 1) params.append("page", newPage.toString());
+              if (statusFilter) params.append("status", statusFilter);
               router.push(`/orders?${params.toString()}`);
             }}
             disabled={page === 1}
@@ -191,8 +200,8 @@ export default function OrdersClient({
               const newPage = Math.min(initialPagination.pages, page + 1);
               setPage(newPage);
               const params = new URLSearchParams();
-              if (newPage > 1) params.append('page', newPage.toString());
-              if (statusFilter) params.append('status', statusFilter);
+              if (newPage > 1) params.append("page", newPage.toString());
+              if (statusFilter) params.append("status", statusFilter);
               router.push(`/orders?${params.toString()}`);
             }}
             disabled={page === initialPagination.pages}
@@ -205,7 +214,7 @@ export default function OrdersClient({
 
       {/* Order Details Modal */}
       {selectedOrder && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4 !m-0">
           <div className="bg-white rounded-lg p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
             <div className="flex justify-between items-center mb-4">
               <h2 className="text-xl font-semibold">Order Details</h2>
@@ -222,7 +231,9 @@ export default function OrdersClient({
                 <h3 className="font-semibold mb-2">Customer Information</h3>
                 <p>Name: {selectedOrder.customerName}</p>
                 <p>Email: {selectedOrder.customerEmail}</p>
-                {selectedOrder.customerPhone && <p>Phone: {selectedOrder.customerPhone}</p>}
+                {selectedOrder.customerPhone && (
+                  <p>Phone: {selectedOrder.customerPhone}</p>
+                )}
               </div>
 
               <div>
@@ -241,7 +252,9 @@ export default function OrdersClient({
                       <tr key={idx} className="border-b">
                         <td className="py-2">{item.productName}</td>
                         <td className="text-right py-2">{item.quantity}</td>
-                        <td className="text-right py-2">{formatCurrency(item.price)}</td>
+                        <td className="text-right py-2">
+                          {formatCurrency(item.price)}
+                        </td>
                         <td className="text-right py-2">
                           {formatCurrency(item.price * item.quantity)}
                         </td>
@@ -264,10 +277,12 @@ export default function OrdersClient({
               <div>
                 <h3 className="font-semibold mb-2">Shipping Address</h3>
                 <p>
-                  {selectedOrder.shippingAddress.street}, {selectedOrder.shippingAddress.city}
+                  {selectedOrder.shippingAddress.street},{" "}
+                  {selectedOrder.shippingAddress.city}
                 </p>
                 <p>
-                  {selectedOrder.shippingAddress.state} {selectedOrder.shippingAddress.zipCode}
+                  {selectedOrder.shippingAddress.state}{" "}
+                  {selectedOrder.shippingAddress.zipCode}
                 </p>
                 <p>{selectedOrder.shippingAddress.country}</p>
               </div>
@@ -279,7 +294,7 @@ export default function OrdersClient({
                   onChange={(e) =>
                     handleStatusUpdate(
                       selectedOrder._id || selectedOrder.id || "",
-                      e.target.value as Order["status"]
+                      e.target.value as Order["status"],
                     )
                   }
                   className="px-4 py-2 border rounded"
@@ -298,4 +313,3 @@ export default function OrdersClient({
     </div>
   );
 }
-

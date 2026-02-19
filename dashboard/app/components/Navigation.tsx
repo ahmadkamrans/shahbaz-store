@@ -8,6 +8,9 @@ import {
   FaBox,
   FaTags,
   FaShoppingCart,
+  FaStar,
+  FaPercent,
+  FaLink,
 } from "react-icons/fa";
 
 const navigation = [
@@ -15,6 +18,9 @@ const navigation = [
   { name: "Products", href: "/products", icon: FaBox },
   { name: "Categories", href: "/categories", icon: FaTags },
   { name: "Orders", href: "/orders", icon: FaShoppingCart },
+  { name: "Reviews", href: "/reviews", icon: FaStar },
+  { name: "Discount Codes", href: "/discount-codes", icon: FaPercent },
+  { name: "Header Links", href: "/header-links", icon: FaLink },
 ];
 
 export default function Navigation() {

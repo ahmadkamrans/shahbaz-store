@@ -74,7 +74,10 @@ export default function ProductsClient({
       };
 
       if (editingProduct) {
-        await productsApi.update(editingProduct._id || editingProduct.id || "", productData);
+        await productsApi.update(
+          editingProduct._id || editingProduct.id || "",
+          productData,
+        );
         toast.success("Product updated successfully!");
       } else {
         await productsApi.create(productData);
@@ -145,7 +148,10 @@ export default function ProductsClient({
 
   const addImage = () => {
     if (newImage.trim()) {
-      setFormData({ ...formData, images: [...formData.images, newImage.trim()] });
+      setFormData({
+        ...formData,
+        images: [...formData.images, newImage.trim()],
+      });
       setNewImage("");
     }
   };
@@ -171,9 +177,13 @@ export default function ProductsClient({
     });
   };
 
-  const getCategoryName = (categoryId: string | { _id: string; name: string }) => {
+  const getCategoryName = (
+    categoryId: string | { _id: string; name: string },
+  ) => {
     if (typeof categoryId === "object") return categoryId.name;
-    const cat = categories.find((c) => c._id === categoryId || c.id === categoryId);
+    const cat = categories.find(
+      (c) => c._id === categoryId || c.id === categoryId,
+    );
     return cat?.name || "Unknown";
   };
 
@@ -220,54 +230,62 @@ export default function ProductsClient({
           <tbody className="bg-white divide-y divide-gray-200">
             {products && products.length > 0 ? (
               products.map((product) => (
-              <tr key={product._id || product.id}>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <img
-                    src={product.image}
-                    alt={product.name}
-                    className="h-12 w-12 object-cover rounded"
-                  />
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <div className="text-sm font-medium text-gray-900">{product.name}</div>
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                  {getCategoryName(product.category)}
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                  ${product.price}
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <span
-                    className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                      product.inStock
-                        ? "bg-green-100 text-green-800"
-                        : "bg-red-100 text-red-800"
-                    }`}
-                  >
-                    {product.inStock ? "In Stock" : "Out of Stock"}
-                  </span>
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                  <button
-                    onClick={() => handleEdit(product)}
-                    className="text-custom-blue hover:text-custom-blue-light mr-4"
-                  >
-                    Edit
-                  </button>
-                  <button
-                    onClick={() => handleDelete(product._id || product.id || "")}
-                    className="text-red-600 hover:text-red-900"
-                  >
-                    Delete
-                  </button>
-                </td>
-              </tr>
-            ))
+                <tr key={product._id || product.id}>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <img
+                      src={product.image}
+                      alt={product.name}
+                      className="h-12 w-12 object-cover rounded"
+                    />
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="text-sm font-medium text-gray-900">
+                      {product.name}
+                    </div>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    {getCategoryName(product.category)}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    ${product.price}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <span
+                      className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                        product.inStock
+                          ? "bg-green-100 text-green-800"
+                          : "bg-red-100 text-red-800"
+                      }`}
+                    >
+                      {product.inStock ? "In Stock" : "Out of Stock"}
+                    </span>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                    <button
+                      onClick={() => handleEdit(product)}
+                      className="text-custom-blue hover:text-custom-blue-light mr-4"
+                    >
+                      Edit
+                    </button>
+                    <button
+                      onClick={() =>
+                        handleDelete(product._id || product.id || "")
+                      }
+                      className="text-red-600 hover:text-red-900"
+                    >
+                      Delete
+                    </button>
+                  </td>
+                </tr>
+              ))
             ) : (
               <tr>
-                <td colSpan={6} className="px-6 py-4 text-center text-sm text-gray-500">
-                  No products found. Click "Add Product" to create your first product.
+                <td
+                  colSpan={6}
+                  className="px-6 py-4 text-center text-sm text-gray-500"
+                >
+                  No products found. Click "Add Product" to create your first
+                  product.
                 </td>
               </tr>
             )}
@@ -307,7 +325,7 @@ export default function ProductsClient({
 
       {/* Product Modal - Keep the same modal code from before */}
       {isModalOpen && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4 !m-0">
           <div className="bg-white rounded-lg p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
             <div className="flex justify-between items-center mb-4">
               <h2 className="text-xl font-semibold">
@@ -335,7 +353,9 @@ export default function ProductsClient({
                     type="text"
                     required
                     value={formData.name}
-                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                    onChange={(e) =>
+                      setFormData({ ...formData, name: e.target.value })
+                    }
                     className="w-full px-3 py-2 border border-gray-300 rounded-md"
                   />
                 </div>
@@ -347,7 +367,9 @@ export default function ProductsClient({
                     type="text"
                     required
                     value={formData.slug}
-                    onChange={(e) => setFormData({ ...formData, slug: e.target.value })}
+                    onChange={(e) =>
+                      setFormData({ ...formData, slug: e.target.value })
+                    }
                     className="w-full px-3 py-2 border border-gray-300 rounded-md"
                   />
                 </div>
@@ -364,7 +386,10 @@ export default function ProductsClient({
                     required
                     value={formData.price}
                     onChange={(e) =>
-                      setFormData({ ...formData, price: parseFloat(e.target.value) || 0 })
+                      setFormData({
+                        ...formData,
+                        price: parseFloat(e.target.value) || 0,
+                      })
                     }
                     className="w-full px-3 py-2 border border-gray-300 rounded-md"
                   />
@@ -377,7 +402,9 @@ export default function ProductsClient({
                     type="number"
                     step="0.01"
                     value={formData.oldPrice}
-                    onChange={(e) => setFormData({ ...formData, oldPrice: e.target.value })}
+                    onChange={(e) =>
+                      setFormData({ ...formData, oldPrice: e.target.value })
+                    }
                     className="w-full px-3 py-2 border border-gray-300 rounded-md"
                   />
                 </div>
@@ -390,7 +417,9 @@ export default function ProductsClient({
                 <select
                   required
                   value={formData.category}
-                  onChange={(e) => setFormData({ ...formData, category: e.target.value })}
+                  onChange={(e) =>
+                    setFormData({ ...formData, category: e.target.value })
+                  }
                   className="w-full px-3 py-2 border border-gray-300 rounded-md"
                 >
                   <option value="">Select Category</option>
@@ -409,11 +438,7 @@ export default function ProductsClient({
                   onUpload={(url) => setFormData({ ...formData, image: url })}
                 />
                 {formData.image && (
-                  <input
-                    type="hidden"
-                    value={formData.image}
-                    required
-                  />
+                  <input type="hidden" value={formData.image} required />
                 )}
               </div>
 
@@ -424,12 +449,17 @@ export default function ProductsClient({
                 <ImageUpload
                   multiple
                   onMultipleUpload={(urls) => {
-                    setFormData({ ...formData, images: [...formData.images, ...urls] });
+                    setFormData({
+                      ...formData,
+                      images: [...formData.images, ...urls],
+                    });
                   }}
                 />
                 {formData.images.length > 0 && (
                   <div className="mt-4">
-                    <p className="text-sm text-gray-600 mb-2">Image Previews:</p>
+                    <p className="text-sm text-gray-600 mb-2">
+                      Image Previews:
+                    </p>
                     <div className="grid grid-cols-4 gap-3">
                       {formData.images.map((img, idx) => (
                         <div key={idx} className="relative group">
@@ -460,7 +490,10 @@ export default function ProductsClient({
                 <textarea
                   value={formData.shortDescription}
                   onChange={(e) =>
-                    setFormData({ ...formData, shortDescription: e.target.value })
+                    setFormData({
+                      ...formData,
+                      shortDescription: e.target.value,
+                    })
                   }
                   className="w-full px-3 py-2 border border-gray-300 rounded-md"
                   rows={2}
@@ -473,7 +506,9 @@ export default function ProductsClient({
                 </label>
                 <textarea
                   value={formData.description}
-                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                  onChange={(e) =>
+                    setFormData({ ...formData, description: e.target.value })
+                  }
                   className="w-full px-3 py-2 border border-gray-300 rounded-md"
                   rows={4}
                 />
@@ -481,11 +516,15 @@ export default function ProductsClient({
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">SKU</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    SKU
+                  </label>
                   <input
                     type="text"
                     value={formData.sku}
-                    onChange={(e) => setFormData({ ...formData, sku: e.target.value })}
+                    onChange={(e) =>
+                      setFormData({ ...formData, sku: e.target.value })
+                    }
                     className="w-full px-3 py-2 border border-gray-300 rounded-md"
                   />
                 </div>
@@ -496,7 +535,10 @@ export default function ProductsClient({
                   <select
                     value={formData.inStock ? "true" : "false"}
                     onChange={(e) =>
-                      setFormData({ ...formData, inStock: e.target.value === "true" })
+                      setFormData({
+                        ...formData,
+                        inStock: e.target.value === "true",
+                      })
                     }
                     className="w-full px-3 py-2 border border-gray-300 rounded-md"
                   >
@@ -507,7 +549,9 @@ export default function ProductsClient({
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Tags</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Tags
+                </label>
                 <div className="flex gap-2 mb-2">
                   <input
                     type="text"
@@ -575,4 +619,3 @@ export default function ProductsClient({
     </div>
   );
 }
-

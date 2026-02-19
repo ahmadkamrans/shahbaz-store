@@ -7,31 +7,21 @@ import {
   FaBox,
   FaTags,
   FaShoppingCart,
+  FaStar,
+  FaPercent,
+  FaLink,
   FaSignOutAlt,
 } from "react-icons/fa";
 import { useAuth } from "../../lib/auth/auth.context";
 
 const menuItems = [
-  {
-    name: "Dashboard",
-    href: "/dashboard",
-    icon: FaChartLine,
-  },
-  {
-    name: "Products",
-    href: "/products",
-    icon: FaBox,
-  },
-  {
-    name: "Categories",
-    href: "/categories",
-    icon: FaTags,
-  },
-  {
-    name: "Orders",
-    href: "/orders",
-    icon: FaShoppingCart,
-  },
+  { name: "Dashboard", href: "/dashboard", icon: FaChartLine },
+  { name: "Products", href: "/products", icon: FaBox },
+  { name: "Categories", href: "/categories", icon: FaTags },
+  { name: "Orders", href: "/orders", icon: FaShoppingCart },
+  { name: "Reviews", href: "/reviews", icon: FaStar },
+  { name: "Discount Codes", href: "/discount-codes", icon: FaPercent },
+  { name: "Header Links", href: "/header-links", icon: FaLink },
 ];
 
 export default function Sidebar() {

@@ -1,10 +1,17 @@
 /* Tailwind CSS */
 @import "tailwindcss";
 
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
 /* Header: center logo and larger size */
 .header-middle.sticky-header {
   position: relative;
 }
+
 .header-logo-center {
   position: absolute;
   left: 50%;
@@ -12,6 +19,7 @@
   display: flex;
   align-items: center;
 }
+
 .header-logo-center img {
   width: auto;
   height: auto;
@@ -130,9 +138,11 @@ body {
   width: 420px;
   transform: translate(440px);
 }
+
 .cart-opened .cart-dropdown .mobile-cart {
   transform: none;
 }
+
 .cart-dropdown .mobile-cart .btn-close {
   left: auto;
   right: 1.5rem;
@@ -141,9 +151,11 @@ body {
   font-size: 2.4rem;
   opacity: 0.8;
 }
+
 .cart-dropdown .mobile-cart .btn-close:hover {
   opacity: 1;
 }
+
 .cart-dropdown .mobile-cart .dropdownmenu-wrapper {
   padding-top: 3.5rem;
 }
