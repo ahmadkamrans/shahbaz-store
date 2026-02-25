@@ -125,10 +125,12 @@ npm run reindex
 - `DELETE /api/wishlist/:productId` - Remove from wishlist (authenticated)
 
 ### Orders
-- `GET /api/orders` - Get user orders (authenticated)
+- `GET /api/orders` - Get user orders (authenticated, supports pagination and status filter)
+  - Query params: `page`, `limit`, `status` (pending, confirmed, shipped, delivered, cancelled)
 - `GET /api/orders/:id` - Get single order (authenticated)
 - `POST /api/orders` - Create order (authenticated)
-- `PUT /api/orders/:id/status` - Update order status (admin only)
+- `PUT /api/orders/:id/cancel` - Cancel order (authenticated, user can cancel own orders)
+- `PUT /api/orders/:id/status` - Update order status (admin only, validates transitions and restores stock on cancellation)
 
 ### Discount Codes
 - `POST /api/discount-codes/validate` - Validate discount code

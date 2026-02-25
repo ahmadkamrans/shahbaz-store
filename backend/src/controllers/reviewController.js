@@ -89,11 +89,11 @@ export const createReview = async (req, res, next) => {
       title,
       comment,
       images,
-      isApproved: false // Admin needs to approve
+      isApproved: true // Auto-approve reviews
     });
 
-    // Update product rating (only if auto-approved, otherwise wait for admin approval)
-    // For now, we'll update it anyway, but in production you might want to wait for approval
+    // Update product rating
+    await updateProductRating(productId);
 
     res.status(201).json({
       success: true,

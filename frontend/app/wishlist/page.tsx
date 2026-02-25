@@ -1,23 +1,33 @@
 "use client";
 
+import { useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { useWishlist } from "@/lib/store/wishlist-store";
 import { useCart } from "@/lib/store/cart-store";
+import { formatCurrency } from "@/lib/utils/currency";
 
 export default function WishlistPage() {
-  const { items, removeItem } = useWishlist();
+  const { items, removeItem, fetchWishlist, loading } = useWishlist();
   const { addItem } = useCart();
 
-  const handleAddToCart = (e: React.MouseEvent, productId: string) => {
+  useEffect(() => {
+    fetchWishlist();
+  }, [fetchWishlist]);
+
+  const handleAddToCart = async (e: React.MouseEvent, productId: string) => {
     e.preventDefault();
     const product = items.find((p) => p.id === productId);
     if (product) addItem(product);
   };
 
-  const handleRemove = (e: React.MouseEvent, productId: string) => {
+  const handleRemove = async (e: React.MouseEvent, productId: string) => {
     e.preventDefault();
-    removeItem(productId);
+    try {
+      await removeItem(productId);
+    } catch (error) {
+      alert('Failed to remove item from wishlist');
+    }
   };
 
   return (
@@ -81,7 +91,13 @@ export default function WishlistPage() {
               </tr>
             </thead>
             <tbody>
-              {items.length === 0 ? (
+              {loading ? (
+                <tr>
+                  <td colSpan={5} className="text-center py-5">
+                    <p>Loading wishlist...</p>
+                  </td>
+                </tr>
+              ) : items.length === 0 ? (
                 <tr>
                   <td colSpan={5} className="text-center py-5">
                     <p className="mb-2">Your wishlist is empty.</p>
@@ -96,7 +112,7 @@ export default function WishlistPage() {
                     <td>
                       <figure className="product-image-container">
                         <Link
-                          href={`/product/${product.id}`}
+                          href={`/product/${product.slug || product.id}`}
                           className="product-image"
                         >
                           <Image
@@ -116,12 +132,12 @@ export default function WishlistPage() {
                     </td>
                     <td>
                       <h5 className="product-title">
-                        <Link href={`/product/${product.id}`}>
+                        <Link href={`/product/${product.slug || product.id}`}>
                           {product.name}
                         </Link>
                       </h5>
                     </td>
-                    <td className="price-box">${product.price.toFixed(2)}</td>
+                    <td className="price-box">{formatCurrency(product.price)}</td>
                     <td>
                       <span className="stock-status">
                         {product.inStock !== false
@@ -131,7 +147,7 @@ export default function WishlistPage() {
                     </td>
                     <td className="action">
                       <Link
-                        href={`/product/${product.id}`}
+                        href={`/product/${product.slug || product.id}`}
                         className="btn btn-quickview mt-1 mt-md-0"
                         title="Quick View"
                       >

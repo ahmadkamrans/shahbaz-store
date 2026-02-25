@@ -1,181 +1,121 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { HomeBanner } from "@/components/banners/HomeBanner";
 import { ProductCarousel } from "@/components/product/ProductCarousel";
+import { QuickViewModal } from "@/components/product/QuickViewModal";
 import { Product } from "@/types";
-
-// Demo products data
-const kitchenProducts: Product[] = [
-  {
-    id: "1",
-    name: "Kitchen Wooden Chair",
-    slug: "kitchen-wooden-chair",
-    price: 49.0,
-    oldPrice: 59.0,
-    image: "/assets/images/demoes/demo29/products/grey/dining/dining(5).jpg",
-    category: "Category",
-    rating: 4,
-  },
-  {
-    id: "2",
-    name: "Sieve",
-    slug: "sieve",
-    price: 49.0,
-    oldPrice: 59.0,
-    image: "/assets/images/demoes/demo29/products/grey/kitchen/kitchen(1).jpg",
-    category: "Category",
-    rating: 4,
-  },
-  {
-    id: "3",
-    name: "Blue Pillow",
-    slug: "blue-pillow",
-    price: 49.0,
-    oldPrice: 59.0,
-    image: "/assets/images/demoes/demo29/products/grey/living/living(2).jpg",
-    category: "Category",
-    rating: 4,
-  },
-  {
-    id: "4",
-    name: "Trellis",
-    slug: "trellis",
-    price: 49.0,
-    oldPrice: 59.0,
-    image: "/assets/images/demoes/demo29/products/grey/outdoor/outdoor(5).jpg",
-    category: "Category",
-    rating: 4,
-  },
-  {
-    id: "5",
-    name: "Dinner Table",
-    slug: "dinner-table",
-    price: 49.0,
-    oldPrice: 59.0,
-    image: "/assets/images/demoes/demo29/products/grey/dining/dining(4).jpg",
-    category: "Category",
-    rating: 4,
-  },
-];
-
-const allProducts: Product[] = [
-  {
-    id: "6",
-    name: "Product Short Name",
-    slug: "product-1",
-    price: 49.0,
-    image: "/assets/images/demoes/demo29/products/grey/bedroom/bedroom(1).jpg",
-    category: "category",
-    rating: 5,
-  },
-  {
-    id: "7",
-    name: "Wooden Arm Chair",
-    slug: "wooden-arm-chair",
-    price: 49.0,
-    image: "/assets/images/demoes/demo29/products/grey/outdoor/outdoor(2).jpg",
-    category: "category",
-    rating: 5,
-  },
-  {
-    id: "8",
-    name: "Bureau",
-    slug: "bureau",
-    price: 49.0,
-    image: "/assets/images/demoes/demo29/products/grey/bedroom/bedroom(3).jpg",
-    category: "category",
-    rating: 5,
-  },
-  {
-    id: "9",
-    name: "Sleepwear",
-    slug: "sleepwear",
-    price: 49.0,
-    image: "/assets/images/demoes/demo29/products/grey/bedroom/bedroom(4).jpg",
-    category: "category",
-    rating: 5,
-  },
-  {
-    id: "10",
-    name: "Clothes Chest",
-    slug: "clothes-chest",
-    price: 49.0,
-    image: "/assets/images/demoes/demo29/products/grey/bedroom/bedroom(5).jpg",
-    category: "category",
-    rating: 5,
-  },
-  {
-    id: "11",
-    name: "Drawer",
-    slug: "drawer",
-    price: 49.0,
-    image: "/assets/images/demoes/demo29/products/grey/dining/dining(1).jpg",
-    category: "category",
-    rating: 5,
-  },
-  {
-    id: "12",
-    name: "Product Short Name",
-    slug: "product-2",
-    price: 49.0,
-    image: "/assets/images/demoes/demo29/products/grey/kitchen/kitchen(2).jpg",
-    category: "category",
-    rating: 5,
-  },
-  {
-    id: "13",
-    name: "Product Short Name",
-    slug: "product-3",
-    price: 49.0,
-    image: "/assets/images/demoes/demo29/products/grey/office/office(4).jpg",
-    category: "category",
-    rating: 5,
-  },
-  {
-    id: "14",
-    name: "Product Short Name",
-    slug: "product-4",
-    price: 49.0,
-    image: "/assets/images/demoes/demo29/products/grey/kitchen/kitchen(7).jpg",
-    category: "category",
-    rating: 5,
-  },
-  {
-    id: "15",
-    name: "Sieve",
-    slug: "sieve-2",
-    price: 49.0,
-    image: "/assets/images/demoes/demo29/products/grey/kitchen/kitchen(1).jpg",
-    category: "category",
-    rating: 5,
-  },
-  {
-    id: "16",
-    name: "Dinner Table",
-    slug: "dinner-table-2",
-    price: 49.0,
-    image: "/assets/images/demoes/demo29/products/grey/dining/dining(4).jpg",
-    category: "category",
-    rating: 5,
-  },
-  {
-    id: "17",
-    name: "Wooden Box",
-    slug: "wooden-box",
-    price: 49.0,
-    image: "/assets/images/demoes/demo29/products/grey/outdoor/outdoor(4).jpg",
-    category: "category",
-    rating: 5,
-  },
-];
+import { productsApi } from "@/lib/api/products";
+import { categoriesApi } from "@/lib/api/categories";
+import { useWishlist } from "@/lib/store/wishlist-store";
+import { useCart } from "@/lib/store/cart-store";
+import { formatCurrency } from "@/lib/utils/currency";
 
 const tabs = ["kitchen", "dining", "bedroom", "living", "office", "outdoor"];
 
 export default function HomePage() {
+  const { addItem: addToWishlist, removeItem, isInWishlist } = useWishlist();
+  const { addItem: addToCart } = useCart();
   const [activeTab, setActiveTab] = useState("kitchen");
+  const [featuredProducts, setFeaturedProducts] = useState<Record<string, Product[]>>({});
+  const [allProducts, setAllProducts] = useState<Product[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [categoryMap, setCategoryMap] = useState<Record<string, string>>({});
+  const [quickViewProduct, setQuickViewProduct] = useState<Product | null>(null);
+
+  const handleToggleWishlist = async (e: React.MouseEvent, product: Product) => {
+    e.preventDefault();
+    try {
+      if (isInWishlist(product.id)) {
+        await removeItem(product.id);
+      } else {
+        await addToWishlist(product);
+      }
+    } catch (error) {
+      // Error is already handled in the store
+    }
+  };
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        setLoading(true);
+        
+        // Fetch categories to map tab names to category IDs
+        const categories = await categoriesApi.getCategories();
+        const map: Record<string, string> = {};
+        
+        // Create mapping from category names/slugs to IDs
+        categories.forEach(category => {
+          const lowerName = category.name.toLowerCase().trim();
+          const lowerSlug = (category.slug || '').toLowerCase().trim();
+          map[lowerName] = category.id;
+          if (lowerSlug) {
+            map[lowerSlug] = category.id;
+          }
+        });
+        
+        setCategoryMap(map);
+
+        // Fetch products for each category tab
+        const productsByCategory: Record<string, Product[]> = {};
+        
+        for (const tab of tabs) {
+          const categoryId = map[tab];
+          
+          if (categoryId) {
+            try {
+              // Get products from this category
+              const result = await productsApi.getProducts({
+                category: categoryId,
+                limit: 5,
+              });
+              
+              productsByCategory[tab] = result.products || [];
+            } catch (error) {
+              console.error(`Failed to fetch products for ${tab}:`, error);
+              productsByCategory[tab] = [];
+            }
+          } else {
+            // If no category found, try to find by name match
+            const matchedCategory = categories.find(
+              cat => cat.name.toLowerCase().trim() === tab
+            );
+            if (matchedCategory) {
+              try {
+                const result = await productsApi.getProducts({
+                  category: matchedCategory.id,
+                  limit: 5,
+                });
+                productsByCategory[tab] = result.products || [];
+              } catch (error) {
+                console.error(`Failed to fetch products for ${tab} (fallback):`, error);
+                productsByCategory[tab] = [];
+              }
+            } else {
+              productsByCategory[tab] = [];
+            }
+          }
+        }
+        
+        setFeaturedProducts(productsByCategory);
+
+        // Fetch all products for grid
+        const all = await productsApi.getProducts({
+          limit: 12,
+        });
+        setAllProducts(all.products);
+      } catch (error) {
+        console.error("Failed to fetch data:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
+  }, []);
 
   return (
     <main className="home main">
@@ -188,7 +128,7 @@ export default function HomePage() {
                 imageWidth={674}
                 imageHeight={316}
                 title="black<br />Armchairs"
-                price="starting from $399"
+                price="starting from Rs 399"
                 link="/products"
                 linkText="shop now"
                 position="right"
@@ -218,9 +158,9 @@ export default function HomePage() {
                       go coupon
                     </a>
                     <h3 className="sale-off skew-box">
-                      <span>$100</span>off
+                      <span>Rs 100</span>off
                     </h3>
-                    <p className="font2">starting from $199</p>
+                    <p className="font2">starting from Rs 199</p>
                     <Link href="/products" className="btn">
                       shop now <i className="fas fa-long-arrow-alt-right"></i>
                     </Link>
@@ -266,7 +206,7 @@ export default function HomePage() {
                     FREE SHIPPING &amp; RETURN
                   </h4>
                   <p className="text-body">
-                    Free shipping on all orders over $99.
+                    Free shipping on all orders over Rs 99.
                   </p>
                 </div>
               </div>
@@ -318,7 +258,7 @@ export default function HomePage() {
                       setActiveTab(tab);
                     }}
                   >
-                    {tab}
+                    {tab.charAt(0).toUpperCase() + tab.slice(1).toUpperCase()}
                   </a>
                 </li>
               ))}
@@ -326,16 +266,31 @@ export default function HomePage() {
           </div>
 
           <div className="tab-content">
-            {tabs.map((tab) => (
-              <div
-                key={tab}
-                className={`tab-pane fade ${
-                  activeTab === tab ? "show active" : ""
-                }`}
-              >
-                <ProductCarousel products={kitchenProducts} />
+            {loading ? (
+              <div className="text-center py-5">
+                <p>Loading products...</p>
               </div>
-            ))}
+            ) : (
+              tabs.map((tab) => {
+                const products = featuredProducts[tab] || [];
+                return (
+                  <div
+                    key={tab}
+                    className={`tab-pane fade ${
+                      activeTab === tab ? "show active" : ""
+                    }`}
+                  >
+                    {products.length > 0 ? (
+                      <ProductCarousel products={products} />
+                    ) : (
+                      <div className="text-center py-5">
+                        <p>No featured products available for this category.</p>
+                      </div>
+                    )}
+                  </div>
+                );
+              })
+            )}
           </div>
         </section>
       </div>
@@ -364,7 +319,7 @@ export default function HomePage() {
               Exclusive COUPON
             </a>
             <h3 className="sale-off skew-box">
-              <span className="text-white">$200</span>off
+              <span className="text-white">Rs 200</span>off
             </h3>
           </div>
         </div>
@@ -373,8 +328,13 @@ export default function HomePage() {
       <section>
         <div className="container">
           <div className="featured-section bg-white appear-animate">
-            <div className="row">
-              {allProducts.map((product) => (
+            {loading ? (
+              <div className="text-center py-5">
+                <p>Loading products...</p>
+              </div>
+            ) : (
+              <div className="row">
+                {allProducts.map((product) => (
                 <div
                   key={product.id}
                   className="col-6 col-md-4 col-lg-3 col-xl-2"
@@ -395,7 +355,7 @@ export default function HomePage() {
                           className="btn-icon btn-add-cart product-type-simple"
                           onClick={(e) => {
                             e.preventDefault();
-                            // Handle add to cart
+                            addToCart(product);
                           }}
                         >
                           <i className="icon-shopping-cart"></i>
@@ -407,7 +367,7 @@ export default function HomePage() {
                         title="Quick View"
                         onClick={(e) => {
                           e.preventDefault();
-                          // Handle quick view
+                          setQuickViewProduct(product);
                         }}
                       >
                         Quick View
@@ -420,13 +380,14 @@ export default function HomePage() {
                             {product.category}
                           </Link>
                         </div>
-                        <Link
-                          href="/wishlist"
-                          title="Wishlist"
-                          className="btn-icon-wish"
+                        <a
+                          href="#"
+                          title={isInWishlist(product.id) ? "Remove from Wishlist" : "Add to Wishlist"}
+                          className={`btn-icon-wish ${isInWishlist(product.id) ? 'added-wishlist' : ''}`}
+                          onClick={(e) => handleToggleWishlist(e, product)}
                         >
                           <i className="icon-heart"></i>
-                        </Link>
+                        </a>
                       </div>
                       <h3 className="product-title">
                         <Link href={`/product/${product.slug}`}>
@@ -444,14 +405,15 @@ export default function HomePage() {
                       </div>
                       <div className="price-box">
                         <span className="product-price">
-                          ${product.price.toFixed(2)}
+                          {formatCurrency(product.price)}
                         </span>
                       </div>
                     </div>
                   </div>
                 </div>
               ))}
-            </div>
+              </div>
+            )}
             <Link href="/products" className="btn with-icon align-center font2">
               Browse All<i className="fas fa-long-arrow-alt-right"></i>
             </Link>
@@ -459,7 +421,7 @@ export default function HomePage() {
 
           <hr />
 
-          {/* <div className="blog-section container mb-4 appear-animate">
+          <div className="blog-section container mb-4 appear-animate">
             <div className="row">
               <div className="col-xl-6 mb-3 mb-xl-0">
                 <div className="section-title d-flex align-items-center mt-1 mb-1">
@@ -515,7 +477,9 @@ export default function HomePage() {
                   <h2 className="mb-0">FROM INSTAGRAM</h2>
                   <hr className="vertical d-none d-sm-block" />
                   <a
-                    href="#"
+                    href="https://instagram.com/shahbaz"
+                    target="_blank"
+                    rel="noopener noreferrer"
                     className="with-icon mr-sm-auto ml-4 mr-4 ml-sm-0"
                   >
                     @SHAHBAZ<i className="fas fa-long-arrow-alt-right"></i>
@@ -552,9 +516,15 @@ export default function HomePage() {
                 </div>
               </div>
             </div>
-          </div> */}
+          </div>
         </div>
       </section>
+
+      <QuickViewModal
+        product={quickViewProduct}
+        isOpen={!!quickViewProduct}
+        onClose={() => setQuickViewProduct(null)}
+      />
     </main>
   );
 }

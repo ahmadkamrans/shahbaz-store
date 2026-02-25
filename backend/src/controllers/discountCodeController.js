@@ -136,7 +136,7 @@ export const validateDiscountCode = async (req, res, next) => {
 
     if (!discountCode) {
       return res.json({
-        success: false,
+        valid: false,
         message: 'Invalid discount code'
       });
     }
@@ -144,7 +144,7 @@ export const validateDiscountCode = async (req, res, next) => {
     // Check expiry
     if (discountCode.expiryDate && new Date() > discountCode.expiryDate) {
       return res.json({
-        success: false,
+        valid: false,
         message: 'Discount code has expired'
       });
     }
@@ -152,7 +152,7 @@ export const validateDiscountCode = async (req, res, next) => {
     // Check max uses
     if (discountCode.maxUses && discountCode.usedCount >= discountCode.maxUses) {
       return res.json({
-        success: false,
+        valid: false,
         message: 'Discount code has reached maximum uses'
       });
     }
@@ -160,8 +160,8 @@ export const validateDiscountCode = async (req, res, next) => {
     // Check min purchase
     if (totalAmount && totalAmount < discountCode.minPurchase) {
       return res.json({
-        success: false,
-        message: `Minimum purchase of $${discountCode.minPurchase} required`
+        valid: false,
+        message: `Minimum purchase of Rs ${discountCode.minPurchase} required`
       });
     }
 
@@ -176,13 +176,13 @@ export const validateDiscountCode = async (req, res, next) => {
     }
 
     res.json({
-      success: true,
+      valid: true,
+      discountAmount,
       discountCode: {
         id: discountCode._id,
         code: discountCode.code,
         type: discountCode.type,
-        value: discountCode.value,
-        discountAmount
+        value: discountCode.value
       }
     });
   } catch (error) {

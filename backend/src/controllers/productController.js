@@ -129,11 +129,30 @@ export const getProducts = async (req, res, next) => {
       if (search) {
         // Sanitize search query to prevent regex injection
         const sanitizedSearch = search.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        
+        // First, find categories that match the search term
+        const Category = (await import('../models/Category.js')).default;
+        const matchingCategories = await Category.find({
+          $or: [
+            { name: { $regex: sanitizedSearch, $options: 'i' } },
+            { slug: { $regex: sanitizedSearch, $options: 'i' } }
+          ]
+        }).select('_id').lean();
+        
+        const categoryIds = matchingCategories.map(cat => cat._id);
+        
+        // Build search query to include product fields and category matches
         query.$or = [
           { name: { $regex: sanitizedSearch, $options: 'i' } },
           { description: { $regex: sanitizedSearch, $options: 'i' } },
+          { shortDescription: { $regex: sanitizedSearch, $options: 'i' } },
           { tags: { $in: [new RegExp(sanitizedSearch, 'i')] } }
         ];
+        
+        // Add category search if matching categories found
+        if (categoryIds.length > 0) {
+          query.$or.push({ category: { $in: categoryIds } });
+        }
       }
 
       const sortOptions = {};
@@ -176,11 +195,15 @@ export const getProducts = async (req, res, next) => {
 
 export const getProduct = async (req, res, next) => {
   try {
+    // Build query condition - only check _id if it's a valid ObjectId
+    const queryConditions = [];
+    if (isValidObjectId(req.params.id)) {
+      queryConditions.push({ _id: req.params.id });
+    }
+    queryConditions.push({ slug: req.params.id });
+    
     const product = await Product.findOne({ 
-      $or: [
-        { _id: req.params.id },
-        { slug: req.params.id }
-      ],
+      $or: queryConditions,
       isActive: true
     })
       .populate('category', 'name slug')
@@ -233,30 +256,127 @@ export const getProduct = async (req, res, next) => {
   }
 };
 
+// Helper function to validate variant/price relationship
+const validateVariantPriceLogic = (productData, isUpdate = false, existingProduct = null) => {
+  // Check if product has variants
+  let hasVariants = false;
+  let variantsMap = null;
+  
+  if (productData.variants) {
+    if (typeof productData.variants === 'string') {
+      try {
+        productData.variants = JSON.parse(productData.variants);
+      } catch (parseError) {
+        throw new AppError('Invalid variants JSON format', 400);
+      }
+    }
+    
+    // Convert to Map and check if it has any variants
+    variantsMap = new Map();
+    Object.entries(productData.variants).forEach(([key, value]) => {
+      if (Array.isArray(value) && value.length > 0) {
+        variantsMap.set(key, value);
+        hasVariants = true;
+      }
+    });
+    
+    if (hasVariants) {
+      productData.variants = variantsMap;
+    } else {
+      // Empty variants object, treat as no variants
+      productData.variants = new Map();
+      hasVariants = false;
+    }
+  } else if (isUpdate && existingProduct && existingProduct.variants && existingProduct.variants.size > 0) {
+    // Updating existing product that has variants
+    hasVariants = true;
+  }
+  
+  // Validation rules:
+  // 1. If product has variants: price is required (as base price)
+  // 2. If product has NO variants: price is required (as actual price)
+  // 3. Price is always required, but its meaning depends on whether variants exist
+  
+  if (!productData.price && productData.price !== 0) {
+    throw new AppError('Product price is required', 400);
+  }
+  
+  if (productData.price < 0) {
+    throw new AppError('Product price cannot be negative', 400);
+  }
+  
+  // If product has variants, price is treated as basePrice
+  // Variants will calculate their price as: basePrice + priceModifier
+  // This is a logical distinction, not a structural one
+  
+  return { hasVariants, variantsMap };
+};
+
 export const createProduct = async (req, res, next) => {
   try {
     const productData = { ...req.body };
     
-    // Handle variants if provided
-    if (productData.variants) {
-      const variantsMap = new Map();
-      if (typeof productData.variants === 'string') {
-        try {
-          productData.variants = JSON.parse(productData.variants);
-        } catch (parseError) {
-          throw new AppError('Invalid variants JSON format', 400);
-        }
-      }
-      Object.entries(productData.variants).forEach(([key, value]) => {
-        variantsMap.set(key, value);
-      });
+    // Debug logging
+    console.log('Received productData.images:', productData.images);
+    console.log('Type of images:', typeof productData.images);
+    console.log('req.files:', req.files);
+    
+    // Validate variant/price relationship
+    const { hasVariants, variantsMap } = validateVariantPriceLogic(productData);
+    
+    // Handle variants if provided (already converted to Map in validation)
+    if (variantsMap) {
       productData.variants = variantsMap;
     }
 
-    // Handle images
+    // Handle images - support both file uploads and pre-uploaded URLs
     if (req.files && req.files.length > 0) {
-      productData.images = req.files.map(file => `/uploads/products/${file.filename}`);
+      // New file uploads
+      const uploadedImages = req.files.map(file => `/uploads/products/${file.filename}`);
+      
+      // If main image not set, use first uploaded image as main image
+      if (!productData.image && uploadedImages.length > 0) {
+        productData.image = uploadedImages[0];
+      }
+      
+      productData.images = uploadedImages;
+    } else if (productData.images) {
+      // Handle images passed as JSON string in FormData or as array
+      if (typeof productData.images === 'string') {
+        try {
+          productData.images = JSON.parse(productData.images);
+        } catch (parseError) {
+          // If not JSON, treat as single image string
+          productData.images = [productData.images];
+        }
+      }
+      // Ensure it's an array
+      if (!Array.isArray(productData.images)) {
+        productData.images = [productData.images];
+      }
+      
+      // Filter out empty strings
+      productData.images = productData.images.filter(img => img && img.trim() !== '');
+      
+      // If main image not set, use first image from array as main image
+      if (!productData.image && productData.images.length > 0) {
+        productData.image = productData.images[0];
+      }
+      
+      // Ensure main image is in images array if not already there
+      if (productData.image && !productData.images.includes(productData.image)) {
+        productData.images.unshift(productData.image);
+      }
+    } else if (productData.image) {
+      // Only main image provided, add it to images array
+      productData.images = [productData.image];
+    } else {
+      // No images provided at all
+      productData.images = [];
     }
+    
+    console.log('Final productData.images before save:', productData.images);
+    console.log('Final productData.image:', productData.image);
 
     const product = await Product.create(productData);
     
@@ -305,26 +425,65 @@ export const updateProduct = async (req, res, next) => {
 
     const updateData = { ...req.body };
 
-    // Handle variants
-    if (updateData.variants) {
-      const variantsMap = new Map();
-      if (typeof updateData.variants === 'string') {
-        try {
-          updateData.variants = JSON.parse(updateData.variants);
-        } catch (parseError) {
-          throw new AppError('Invalid variants JSON format', 400);
-        }
-      }
-      Object.entries(updateData.variants).forEach(([key, value]) => {
-        variantsMap.set(key, value);
-      });
+    // Validate variant/price relationship
+    const { hasVariants, variantsMap } = validateVariantPriceLogic(updateData, true, product);
+    
+    // Handle variants if provided (already converted to Map in validation)
+    if (variantsMap) {
       updateData.variants = variantsMap;
+    } else if (updateData.variants === null || updateData.variants === '') {
+      // Explicitly removing variants
+      updateData.variants = new Map();
     }
 
-    // Handle new images
+    // Handle main image - can be provided separately
+    if (updateData.image !== undefined) {
+      // Main image is provided, store it
+      updateData.image = updateData.image;
+    }
+
+    // Handle images - support both file uploads and replacing with URLs
+    if (updateData.images !== undefined) {
+      // If images are provided in body (as JSON string or array), use them to replace
+      if (typeof updateData.images === 'string') {
+        try {
+          updateData.images = JSON.parse(updateData.images);
+        } catch (parseError) {
+          // If not JSON, treat as single image string
+          updateData.images = [updateData.images];
+        }
+      }
+      if (!Array.isArray(updateData.images)) {
+        updateData.images = [updateData.images];
+      }
+    }
+    
+    // If new files are uploaded, append them (or set if no images were in body)
     if (req.files && req.files.length > 0) {
       const newImages = req.files.map(file => `/uploads/products/${file.filename}`);
-      updateData.images = [...(product.images || []), ...newImages];
+      
+      // If main image not set, use first uploaded image as main image
+      if (!updateData.image && newImages.length > 0) {
+        updateData.image = newImages[0];
+      }
+      
+      if (updateData.images && Array.isArray(updateData.images)) {
+        // Append new files to existing images array
+        updateData.images = [...updateData.images, ...newImages];
+      } else {
+        // If no images in body, append to existing product images
+        updateData.images = [...(product.images || []), ...newImages];
+      }
+    }
+    
+    // If main image not set but images array is provided, use first image as main
+    if (!updateData.image && updateData.images && updateData.images.length > 0) {
+      updateData.image = updateData.images[0];
+    }
+    
+    // Ensure main image is in images array if not already there
+    if (updateData.image && updateData.images && Array.isArray(updateData.images) && !updateData.images.includes(updateData.image)) {
+      updateData.images.unshift(updateData.image);
     }
 
     Object.assign(product, updateData);
@@ -397,11 +556,18 @@ export const deleteProduct = async (req, res, next) => {
 
 export const getRelatedProducts = async (req, res, next) => {
   try {
-    if (!isValidObjectId(req.params.id)) {
-      throw new AppError('Invalid product ID format', 400);
+    // Build query condition - only check _id if it's a valid ObjectId
+    const queryConditions = [];
+    if (isValidObjectId(req.params.id)) {
+      queryConditions.push({ _id: req.params.id });
     }
-
-    const product = await Product.findById(req.params.id);
+    queryConditions.push({ slug: req.params.id });
+    
+    const product = await Product.findOne({
+      $or: queryConditions,
+      isActive: true
+    });
+    
     if (!product) {
       throw new AppError('Product not found', 404);
     }
@@ -457,11 +623,15 @@ export const getPopularProducts = async (req, res, next) => {
 
 export const getShareData = async (req, res, next) => {
   try {
+    // Build query condition - only check _id if it's a valid ObjectId
+    const queryConditions = [];
+    if (isValidObjectId(req.params.id)) {
+      queryConditions.push({ _id: req.params.id });
+    }
+    queryConditions.push({ slug: req.params.id });
+    
     const product = await Product.findOne({
-      $or: [
-        { _id: req.params.id },
-        { slug: req.params.id }
-      ],
+      $or: queryConditions,
       isActive: true
     }).select('name description images metaTitle metaDescription');
 

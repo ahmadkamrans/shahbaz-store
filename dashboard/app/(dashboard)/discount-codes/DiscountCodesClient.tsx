@@ -65,18 +65,49 @@ export default function DiscountCodesClient({
         endDate: formData.endDate || new Date().toISOString().slice(0, 10),
         active: formData.active,
       };
-      if (editingCode) {
-        await discountCodesApi.update(editingCode.id!, payload);
+      
+      let updatedCode: DiscountCode;
+      if (editingCode && editingCode.id) {
+        // Validate that id is a valid MongoDB ObjectId format
+        if (!/^[0-9a-fA-F]{24}$/.test(editingCode.id)) {
+          toast.error("Invalid discount code ID");
+          return;
+        }
+        updatedCode = await discountCodesApi.update(editingCode.id, payload);
+        // Update the code in local state immediately
+        setCodes(prevCodes =>
+          prevCodes.map(c => c.id === editingCode.id ? updatedCode : c)
+        );
         toast.success("Discount code updated!");
       } else {
-        await discountCodesApi.create(payload);
+        updatedCode = await discountCodesApi.create(payload);
+        // Add the new code to local state immediately
+        setCodes(prevCodes => [updatedCode, ...prevCodes]);
         toast.success("Discount code created!");
       }
+      
       setIsModalOpen(false);
       resetForm();
+      // Refresh in background to ensure consistency
       refreshCodes();
-    } catch (err) {
-      toast.error("Failed to save discount code");
+    } catch (err: any) {
+      console.error("Error saving discount code:", err);
+      
+      // Extract error message properly
+      let errorMessage = "Failed to save discount code";
+      if (err.response?.data) {
+        if (err.response.data.message) {
+          errorMessage = err.response.data.message;
+        } else if (typeof err.response.data.error === 'string') {
+          errorMessage = err.response.data.error;
+        } else if (err.response.data.error?.message) {
+          errorMessage = err.response.data.error.message;
+        }
+      } else if (err.message) {
+        errorMessage = err.message;
+      }
+      
+      toast.error(errorMessage);
     }
   };
 
@@ -97,12 +128,38 @@ export default function DiscountCodesClient({
 
   const handleDelete = async (id: string) => {
     if (!confirm("Delete this discount code?")) return;
+    
+    // Validate that id is a valid MongoDB ObjectId format
+    if (!id || !/^[0-9a-fA-F]{24}$/.test(id)) {
+      toast.error("Invalid discount code ID");
+      return;
+    }
+    
     try {
       await discountCodesApi.delete(id);
+      // Remove the code from local state immediately
+      setCodes(prevCodes => prevCodes.filter(c => c.id !== id));
       toast.success("Discount code deleted!");
+      // Refresh in background to ensure consistency
       refreshCodes();
-    } catch {
-      toast.error("Failed to delete");
+    } catch (err: any) {
+      console.error("Error deleting discount code:", err);
+      
+      // Extract error message properly
+      let errorMessage = "Failed to delete discount code";
+      if (err.response?.data) {
+        if (err.response.data.message) {
+          errorMessage = err.response.data.message;
+        } else if (typeof err.response.data.error === 'string') {
+          errorMessage = err.response.data.error;
+        } else if (err.response.data.error?.message) {
+          errorMessage = err.response.data.error.message;
+        }
+      } else if (err.message) {
+        errorMessage = err.message;
+      }
+      
+      toast.error(errorMessage);
     }
   };
 

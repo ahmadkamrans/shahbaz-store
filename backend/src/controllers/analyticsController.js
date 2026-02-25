@@ -1,5 +1,6 @@
 import Analytics from '../models/Analytics.js';
 import Product from '../models/Product.js';
+import Order from '../models/Order.js';
 import { AppError } from '../utils/errors.js';
 import { isValidObjectId, safeNumber } from '../utils/helpers.js';
 import { validateQueryParams } from '../utils/validators.js';
@@ -107,68 +108,101 @@ export const getPopularProducts = async (req, res, next) => {
 
 export const getDashboardStats = async (req, res, next) => {
   try {
-    const validatedDays = validateQueryParams.days(req.query.days, 30, 365);
-    const startDate = new Date();
-    startDate.setDate(startDate.getDate() - validatedDays);
-
     const [
-      totalViews,
-      productViews,
-      searchQueries,
-      topProducts
+      totalProducts,
+      activeProducts,
+      totalOrders,
+      pendingOrders,
+      confirmedOrders,
+      revenueResult,
+      recentOrders,
+      lowStockProducts
     ] = await Promise.all([
-      Analytics.countDocuments({ 
-        eventType: 'page_view', 
-        createdAt: { $gte: startDate } 
-      }),
-      Analytics.countDocuments({ 
-        eventType: 'product_view', 
-        createdAt: { $gte: startDate } 
-      }),
-      Analytics.distinct('metadata.query', {
-        eventType: 'search',
-        createdAt: { $gte: startDate }
-      }),
-      Analytics.aggregate([
+      // Count total products
+      Product.countDocuments(),
+      // Count active products
+      Product.countDocuments({ isActive: true }),
+      // Count total orders
+      Order.countDocuments(),
+      // Count pending orders
+      Order.countDocuments({ status: 'pending' }),
+      // Count confirmed orders
+      Order.countDocuments({ status: 'confirmed' }),
+      // Calculate total revenue (sum of totalAmount from delivered orders only)
+      Order.aggregate([
         {
           $match: {
-            eventType: 'product_view',
-            createdAt: { $gte: startDate }
+            status: 'delivered'
           }
         },
         {
           $group: {
-            _id: '$product',
-            count: { $sum: 1 }
-          }
-        },
-        { $sort: { count: -1 } },
-        { $limit: 5 },
-        {
-          $lookup: {
-            from: 'products',
-            localField: '_id',
-            foreignField: '_id',
-            as: 'product'
-          }
-        },
-        { $unwind: '$product' },
-        {
-          $project: {
-            name: '$product.name',
-            views: '$count'
+            _id: null,
+            totalRevenue: { $sum: '$totalAmount' }
           }
         }
-      ])
+      ]),
+      // Get recent orders (last 10) with populated user info
+      Order.find()
+        .populate('user', 'name email phone')
+        .populate('items.product', 'name slug images')
+        .sort({ createdAt: -1 })
+        .limit(10)
+        .lean(),
+      // Get low stock products (stock <= lowStockThreshold)
+      Product.find({
+        trackInventory: true,
+        $expr: { $lte: ['$stock', '$lowStockThreshold'] },
+        isActive: true
+      })
+        .select('name slug stock lowStockThreshold images')
+        .limit(10)
+        .lean()
     ]);
+
+    // Extract revenue from aggregation result
+    const totalRevenue = revenueResult.length > 0 ? revenueResult[0].totalRevenue : 0;
+
+    // Transform recent orders to match frontend expectations
+    const transformedRecentOrders = recentOrders.map(order => ({
+      _id: order._id,
+      id: order._id,
+      customerName: order.user?.name || 'N/A',
+      customerEmail: order.user?.email || 'N/A',
+      customerPhone: order.user?.phone,
+      items: order.items.map(item => ({
+        productId: item.product?._id || item.product,
+        productName: item.product?.name || '',
+        productImage: item.product?.images?.[0] || '',
+        quantity: item.quantity,
+        price: item.price
+      })),
+      total: order.totalAmount,
+      subtotal: order.totalAmount - (order.discountAmount || 0),
+      status: order.status,
+      createdAt: order.createdAt,
+      updatedAt: order.updatedAt
+    }));
 
     res.json({
       success: true,
       stats: {
-        totalViews,
-        productViews,
-        searchQueries: searchQueries.slice(0, 10),
-        topProducts
+        totalProducts,
+        activeProducts,
+        totalOrders,
+        pendingOrders,
+        confirmedOrders,
+        totalRevenue,
+        recentOrders: transformedRecentOrders,
+        lowStockProducts: lowStockProducts.map(p => ({
+          _id: p._id,
+          id: p._id,
+          name: p.name,
+          slug: p.slug,
+          stock: p.stock,
+          lowStockThreshold: p.lowStockThreshold,
+          image: p.images?.[0] || ''
+        }))
       }
     });
   } catch (error) {

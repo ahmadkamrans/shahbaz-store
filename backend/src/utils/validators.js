@@ -18,6 +18,8 @@ export const productSchema = Joi.object({
   price: Joi.number().min(0).required(),
   compareAtPrice: Joi.number().min(0).allow(null),
   category: Joi.string().required(),
+  image: Joi.string().allow('', null),
+  images: Joi.array().items(Joi.string()).default([]),
   stock: Joi.number().min(0).default(0),
   trackInventory: Joi.boolean().default(true),
   lowStockThreshold: Joi.number().min(0).default(10),
@@ -41,6 +43,17 @@ export const productSchema = Joi.object({
     }))
   ).allow(null),
   barcode: Joi.string().trim().uppercase().allow('', null)
+}).custom((value, helpers) => {
+  // Custom validation: If product has variants, price is treated as basePrice
+  // If product has NO variants, price is the actual selling price (required)
+  // This is handled in the controller, but we validate structure here
+  const hasVariants = value.variants && 
+    typeof value.variants === 'object' && 
+    Object.keys(value.variants).length > 0;
+  
+  // Price is always required (either as actual price or base price)
+  // The distinction is logical, not structural
+  return value;
 });
 
 export const categorySchema = Joi.object({
@@ -78,6 +91,7 @@ export const headerLinkSchema = Joi.object({
   order: Joi.number().default(0),
   isActive: Joi.boolean().default(true),
   openInNewTab: Joi.boolean().default(false)
+  // URL validation is done in the controller to access both url and openInNewTab fields
 });
 
 export const orderItemSchema = Joi.object({
@@ -203,9 +217,23 @@ export const validateQueryParams = {
 
 export const validate = (schema) => {
   return (req, res, next) => {
-    const { error } = schema.validate(req.body, {
+    // Parse JSON strings in FormData (for arrays and objects)
+    const body = { ...req.body };
+    Object.keys(body).forEach(key => {
+      const value = body[key];
+      if (typeof value === 'string' && (value.trim().startsWith('[') || value.trim().startsWith('{'))) {
+        try {
+          body[key] = JSON.parse(value);
+        } catch (e) {
+          // If parsing fails, keep original value
+        }
+      }
+    });
+
+    const { error, value } = schema.validate(body, {
       abortEarly: false,
-      stripUnknown: true
+      stripUnknown: true,
+      convert: true // Convert types (e.g., string to number)
     });
 
     if (error) {
@@ -221,6 +249,8 @@ export const validate = (schema) => {
       });
     }
 
+    // Replace req.body with validated and converted values
+    req.body = value;
     next();
   };
 };

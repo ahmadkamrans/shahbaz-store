@@ -1,21 +1,50 @@
+"use client";
+
+import { useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { Product } from '@/types';
 import { formatPrice } from '@/lib/utils';
+import { useWishlist } from '@/lib/store/wishlist-store';
+import { useCart } from '@/lib/store/cart-store';
+import { QuickViewModal } from './QuickViewModal';
 
 interface ProductCardProps {
   product: Product;
   showQuickView?: boolean;
+  viewMode?: 'grid' | 'list';
 }
 
-export function ProductCard({ product, showQuickView = true }: ProductCardProps) {
+export function ProductCard({ product, showQuickView = true, viewMode = 'grid' }: ProductCardProps) {
+  const { addItem: addToWishlist, removeItem, isInWishlist } = useWishlist();
+  const { addItem: addToCart } = useCart();
+  const [quickViewProduct, setQuickViewProduct] = useState<Product | null>(null);
+  
   const discount = product.oldPrice
     ? Math.round(((product.oldPrice - product.price) / product.oldPrice) * 100)
     : 0;
 
+  const handleToggleWishlist = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    try {
+      if (isInWishlist(product.id)) {
+        await removeItem(product.id);
+      } else {
+        await addToWishlist(product);
+      }
+    } catch (error) {
+      // Error is already handled in the store
+    }
+  };
+
+  const handleAddToCart = (e: React.MouseEvent) => {
+    e.preventDefault();
+    addToCart(product);
+  };
+
   return (
-    <div className="product-default">
-      <figure>
+    <div className={`product-default ${viewMode === 'list' ? 'product-list' : ''}`}>
+      <figure className={viewMode === 'list' ? 'col-md-4' : ''}>
         <Link href={`/product/${product.slug}`}>
           <Image
             src={product.image}
@@ -25,7 +54,7 @@ export function ProductCard({ product, showQuickView = true }: ProductCardProps)
           />
         </Link>
       </figure>
-      <div className="product-details">
+      <div className={`product-details ${viewMode === 'list' ? 'col-md-8' : ''}`}>
         <div className="category-list">
           <Link href="/products" className="product-category">
             {product.category}
@@ -50,16 +79,18 @@ export function ProductCard({ product, showQuickView = true }: ProductCardProps)
           <span className="product-price">{formatPrice(product.price)}</span>
         </div>
         <div className="product-action">
-          <Link href="/wishlist" title="Wishlist" className="btn-icon-wish">
+          <a
+            href="#"
+            title={isInWishlist(product.id) ? "Remove from Wishlist" : "Add to Wishlist"}
+            className={`btn-icon-wish ${isInWishlist(product.id) ? 'added-wishlist' : ''}`}
+            onClick={handleToggleWishlist}
+          >
             <i className="icon-heart"></i>
-          </Link>
+          </a>
           <a
             href="#"
             className="btn-icon btn-add-cart product-type-simple"
-            onClick={(e) => {
-              e.preventDefault();
-              // Handle add to cart
-            }}
+            onClick={handleAddToCart}
           >
             <i className="icon-shopping-cart"></i>
             <span>ADD TO CART</span>
@@ -71,7 +102,7 @@ export function ProductCard({ product, showQuickView = true }: ProductCardProps)
               title="Quick View"
               onClick={(e) => {
                 e.preventDefault();
-                // Handle quick view
+                setQuickViewProduct(product);
               }}
             >
               <i className="fas fa-external-link-alt"></i>
@@ -79,6 +110,12 @@ export function ProductCard({ product, showQuickView = true }: ProductCardProps)
           )}
         </div>
       </div>
+
+      <QuickViewModal
+        product={quickViewProduct}
+        isOpen={!!quickViewProduct}
+        onClose={() => setQuickViewProduct(null)}
+      />
     </div>
   );
 }

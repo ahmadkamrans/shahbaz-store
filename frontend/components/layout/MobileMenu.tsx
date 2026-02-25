@@ -2,13 +2,15 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
+import { HeaderLink } from '@/lib/api/headerLinks';
 
 interface MobileMenuProps {
   isOpen: boolean;
   onClose: () => void;
+  headerLinks?: HeaderLink[];
 }
 
-export function MobileMenu({ isOpen, onClose }: MobileMenuProps) {
+export function MobileMenu({ isOpen, onClose, headerLinks = [] }: MobileMenuProps) {
   const [expandedMenus, setExpandedMenus] = useState<string[]>([]);
 
   const toggleMenu = (menuId: string) => {
@@ -31,188 +33,26 @@ export function MobileMenu({ isOpen, onClose }: MobileMenuProps) {
           </span>
           <nav className="mobile-nav">
             <ul className="mobile-menu">
-              <li>
-                <Link href="/">Home</Link>
-              </li>
-              <li>
-                <a
-                  href="#"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    toggleMenu('categories');
-                  }}
-                >
-                  Categories
-                </a>
-                {expandedMenus.includes('categories') && (
-                  <ul>
-                    <li>
-                      <Link href="/products">Full Width Banner</Link>
-                    </li>
-                    <li>
-                      <Link href="/products">Boxed Slider Banner</Link>
-                    </li>
-                    <li>
-                      <Link href="/products">Boxed Image Banner</Link>
-                    </li>
-                    <li>
-                      <Link href="/products">Left Sidebar</Link>
-                    </li>
-                    <li>
-                      <Link href="/products">Right Sidebar</Link>
-                    </li>
-                    <li>
-                      <Link href="/products">Off Canvas Filter</Link>
-                    </li>
-                    <li>
-                      <Link href="/products">Horizontal Filter 1</Link>
-                    </li>
-                    <li>
-                      <Link href="/products">Horizontal Filter 2</Link>
-                    </li>
-                    <li>
-                      <Link href="/products">List Types</Link>
-                    </li>
-                    <li>
-                      <Link href="/products">
-                        Ajax Infinite Scroll
-                        <span className="tip tip-new">New</span>
+              {headerLinks.length > 0 ? (
+                headerLinks.map((link) => (
+                  <li key={link._id || link.id}>
+                    {link.openInNewTab ? (
+                      <a 
+                        href={link.url} 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        onClick={onClose}
+                      >
+                        {link.label}
+                      </a>
+                    ) : (
+                      <Link href={link.url} onClick={onClose}>
+                        {link.label}
                       </Link>
-                    </li>
-                    <li>
-                      <Link href="/products">3 Columns Products</Link>
-                    </li>
-                    <li>
-                      <Link href="/products">4 Columns Products</Link>
-                    </li>
-                    <li>
-                      <Link href="/products">5 Columns Products</Link>
-                    </li>
-                    <li>
-                      <Link href="/products">6 Columns Products</Link>
-                    </li>
-                    <li>
-                      <Link href="/products">7 Columns Products</Link>
-                    </li>
-                    <li>
-                      <Link href="/products">8 Columns Products</Link>
-                    </li>
-                  </ul>
-                )}
-              </li>
-              <li>
-                <a
-                  href="#"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    toggleMenu('products');
-                  }}
-                >
-                  Products
-                </a>
-                {expandedMenus.includes('products') && (
-                  <ul>
-                    <li>
-                      <a href="#" className="nolink">
-                        PRODUCT PAGES
-                      </a>
-                      <ul>
-                        <li>
-                          <Link href="/product/1">SIMPLE PRODUCT</Link>
-                        </li>
-                        <li>
-                          <Link href="/product/1">VARIABLE PRODUCT</Link>
-                        </li>
-                        <li>
-                          <Link href="/product/1">SALE PRODUCT</Link>
-                        </li>
-                        <li>
-                          <Link href="/product/1">FEATURED & ON SALE</Link>
-                        </li>
-                        <li>
-                          <Link href="/product/1">WIDTH CUSTOM TAB</Link>
-                        </li>
-                        <li>
-                          <Link href="/product/1">WITH LEFT SIDEBAR</Link>
-                        </li>
-                        <li>
-                          <Link href="/product/1">WITH RIGHT SIDEBAR</Link>
-                        </li>
-                        <li>
-                          <Link href="/product/1">ADD CART STICKY</Link>
-                        </li>
-                      </ul>
-                    </li>
-                    <li>
-                      <a href="#" className="nolink">
-                        PRODUCT LAYOUTS
-                      </a>
-                      <ul>
-                        <li>
-                          <Link href="/product/1">EXTENDED LAYOUT</Link>
-                        </li>
-                        <li>
-                          <Link href="/product/1">GRID IMAGE</Link>
-                        </li>
-                        <li>
-                          <Link href="/product/1">FULL WIDTH LAYOUT</Link>
-                        </li>
-                        <li>
-                          <Link href="/product/1">STICKY INFO</Link>
-                        </li>
-                        <li>
-                          <Link href="/product/1">LEFT & RIGHT STICKY</Link>
-                        </li>
-                        <li>
-                          <Link href="/product/1">TRANSPARENT IMAGE</Link>
-                        </li>
-                        <li>
-                          <Link href="/product/1">CENTER VERTICAL</Link>
-                        </li>
-                        <li>
-                          <Link href="/product/1">BUILD YOUR OWN</Link>
-                        </li>
-                      </ul>
-                    </li>
-                  </ul>
-                )}
-              </li>
-              <li>
-                <a
-                  href="#"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    toggleMenu('pages');
-                  }}
-                >
-                  Pages<span className="tip tip-hot">Hot!</span>
-                </a>
-                {expandedMenus.includes('pages') && (
-                  <ul>
-                    <li>
-                      <Link href="/wishlist">Wishlist</Link>
-                    </li>
-                    <li>
-                      <Link href="/cart">Shopping Cart</Link>
-                    </li>
-                    <li>
-                      <Link href="/checkout">Checkout</Link>
-                    </li>
-                    <li>
-                      <Link href="/dashboard">Dashboard</Link>
-                    </li>
-                    <li>
-                      <Link href="/login">Login</Link>
-                    </li>
-                    <li>
-                      <Link href="/forgot-password">Forgot Password</Link>
-                    </li>
-                  </ul>
-                )}
-              </li>
-              <li>
-                <Link href="/blog">Blog</Link>
-              </li>
+                    )}
+                  </li>
+                ))
+              ) : null}
             </ul>
 
             <ul className="mobile-menu mt-2 mb-2">

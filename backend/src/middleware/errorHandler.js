@@ -27,9 +27,12 @@ export const errorHandler = (err, req, res, next) => {
     res.status(err.statusCode).json({
       success: false,
       status: err.status,
-      error: err,
       message: err.message,
-      stack: err.stack
+      stack: err.stack,
+      ...(err.isOperational && {
+        statusCode: err.statusCode,
+        isOperational: err.isOperational
+      })
     });
   } else {
     // Production

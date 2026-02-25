@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { ordersApi, Order } from "../../../lib/api/orders.api";
 import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
@@ -16,6 +16,19 @@ interface OrdersClientProps {
   initialStatus: string;
 }
 
+// Helper function to get valid next statuses based on current status
+const getValidNextStatuses = (currentStatus: Order['status']): Order['status'][] => {
+  const validTransitions: Record<Order['status'], Order['status'][]> = {
+    'pending': ['confirmed', 'cancelled'],
+    'confirmed': ['shipped', 'cancelled'],
+    'shipped': ['delivered', 'cancelled'],
+    'delivered': [], // Cannot transition from delivered
+    'cancelled': [] // Cannot transition from cancelled
+  };
+  
+  return validTransitions[currentStatus] || [];
+};
+
 export default function OrdersClient({
   initialOrders,
   initialPagination,
@@ -23,10 +36,15 @@ export default function OrdersClient({
 }: OrdersClientProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const orders = initialOrders; // Use props directly, will update on refresh
+  const [orders, setOrders] = useState<Order[]>(initialOrders);
   const [page, setPage] = useState(initialPagination.page);
   const [statusFilter, setStatusFilter] = useState(initialStatus);
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
+
+  // Sync orders with props when they change (e.g., after router.refresh())
+  useEffect(() => {
+    setOrders(initialOrders);
+  }, [initialOrders]);
 
   const refreshOrders = () => {
     const params = new URLSearchParams();
@@ -42,16 +60,50 @@ export default function OrdersClient({
   ) => {
     try {
       await ordersApi.updateStatus(orderId, newStatus);
-      toast.success("Order status updated successfully!");
-      refreshOrders();
+      
+      // Update the order in the local state immediately
+      setOrders(prevOrders => 
+        prevOrders.map(order => {
+          const orderIdMatch = order._id === orderId || order.id === orderId;
+          if (orderIdMatch) {
+            return { ...order, status: newStatus };
+          }
+          return order;
+        })
+      );
+      
+      // Update selected order if it's the one being updated
       if (selectedOrder?._id === orderId || selectedOrder?.id === orderId) {
         setSelectedOrder({ ...selectedOrder, status: newStatus });
       }
+      
+      toast.success("Order status updated successfully!");
+      
+      // Refresh in the background to ensure data consistency
+      refreshOrders();
     } catch (error: any) {
       console.error("Error updating order status:", error);
-      toast.error(
-        error.response?.data?.error || "Failed to update order status",
-      );
+      
+      // Extract error message properly
+      let errorMessage = "Failed to update order status";
+      if (error.response?.data) {
+        // Check for message first (preferred)
+        if (error.response.data.message) {
+          errorMessage = error.response.data.message;
+        } 
+        // If error is a string, use it
+        else if (typeof error.response.data.error === 'string') {
+          errorMessage = error.response.data.error;
+        }
+        // If error is an object, try to get its message
+        else if (error.response.data.error?.message) {
+          errorMessage = error.response.data.error.message;
+        }
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+      
+      toast.error(errorMessage);
     }
   };
 
@@ -64,10 +116,7 @@ export default function OrdersClient({
   };
 
   const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat("en-US", {
-      style: "currency",
-      currency: "USD",
-    }).format(amount);
+    return `Rs ${amount.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',')}`;
   };
 
   const getStatusColor = (status: string) => {
@@ -94,7 +143,7 @@ export default function OrdersClient({
         >
           <option value="">All Statuses</option>
           <option value="pending">Pending</option>
-          <option value="processing">Processing</option>
+          <option value="confirmed">Confirmed</option>
           <option value="shipped">Shipped</option>
           <option value="delivered">Delivered</option>
           <option value="cancelled">Cancelled</option>
@@ -228,6 +277,28 @@ export default function OrdersClient({
 
             <div className="space-y-4">
               <div>
+                <h3 className="font-semibold mb-2">Order Information</h3>
+                <p>Order ID: {(selectedOrder._id || selectedOrder.id)?.toString().substring(0, 8)}</p>
+                <p>Status: <span className={`px-2 py-1 rounded text-xs ${getStatusColor(selectedOrder.status)}`}>{selectedOrder.status}</span></p>
+                <p>Date: {selectedOrder.createdAt ? new Date(selectedOrder.createdAt).toLocaleDateString() : '-'}</p>
+                {selectedOrder.discountCode && (
+                  <div className="mt-2 p-2 bg-gray-50 rounded">
+                    <p className="font-medium">Discount Code Applied:</p>
+                    <p>Code: <strong>{selectedOrder.discountCode.code}</strong></p>
+                    <p>Type: {selectedOrder.discountCode.type === 'percentage' ? 'Percentage' : 'Fixed Amount'}</p>
+                    <p>Value: {selectedOrder.discountCode.type === 'percentage' 
+                      ? `${selectedOrder.discountCode.value}%` 
+                      : `Rs ${selectedOrder.discountCode.value}`}</p>
+                    {selectedOrder.discountAmount && selectedOrder.discountAmount > 0 && (
+                      <p className="text-green-600 font-medium">
+                        Discount Applied: -{formatCurrency(selectedOrder.discountAmount)}
+                      </p>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              <div>
                 <h3 className="font-semibold mb-2">Customer Information</h3>
                 <p>Name: {selectedOrder.customerName}</p>
                 <p>Email: {selectedOrder.customerEmail}</p>
@@ -262,12 +333,49 @@ export default function OrdersClient({
                     ))}
                   </tbody>
                   <tfoot>
+                    {selectedOrder.subtotal && selectedOrder.subtotal !== selectedOrder.total && (
+                      <tr>
+                        <td colSpan={3} className="text-right py-2">
+                          Subtotal:
+                        </td>
+                        <td className="text-right py-2">
+                          {formatCurrency(selectedOrder.subtotal)}
+                        </td>
+                      </tr>
+                    )}
+                    {selectedOrder.discountCode && selectedOrder.discountAmount && selectedOrder.discountAmount > 0 && (
+                      <>
+                        <tr>
+                          <td colSpan={3} className="text-right py-2">
+                            Discount Code:
+                          </td>
+                          <td className="text-right py-2">
+                            <span className="font-medium">{selectedOrder.discountCode.code}</span>
+                            {selectedOrder.discountCode.type && (
+                              <span className="text-sm text-gray-500 ml-2">
+                                ({selectedOrder.discountCode.type === 'percentage' 
+                                  ? `${selectedOrder.discountCode.value}%` 
+                                  : `Rs ${selectedOrder.discountCode.value}`})
+                              </span>
+                            )}
+                          </td>
+                        </tr>
+                        <tr>
+                          <td colSpan={3} className="text-right py-2">
+                            Discount Amount:
+                          </td>
+                          <td className="text-right py-2 text-green-600">
+                            -{formatCurrency(selectedOrder.discountAmount)}
+                          </td>
+                        </tr>
+                      </>
+                    )}
                     <tr>
                       <td colSpan={3} className="text-right font-semibold py-2">
                         Total:
                       </td>
                       <td className="text-right font-semibold py-2">
-                        {formatCurrency(selectedOrder.total)}
+                        {formatCurrency(selectedOrder.total || selectedOrder.totalAmount)}
                       </td>
                     </tr>
                   </tfoot>
@@ -299,12 +407,23 @@ export default function OrdersClient({
                   }
                   className="px-4 py-2 border rounded"
                 >
-                  <option value="pending">Pending</option>
-                  <option value="processing">Processing</option>
-                  <option value="shipped">Shipped</option>
-                  <option value="delivered">Delivered</option>
-                  <option value="cancelled">Cancelled</option>
+                  <option value={selectedOrder.status} disabled>
+                    Current: {selectedOrder.status.charAt(0).toUpperCase() + selectedOrder.status.slice(1)}
+                  </option>
+                  {getValidNextStatuses(selectedOrder.status).map((status) => (
+                    <option key={status} value={status}>
+                      {status.charAt(0).toUpperCase() + status.slice(1)}
+                    </option>
+                  ))}
+                  {getValidNextStatuses(selectedOrder.status).length === 0 && (
+                    <option disabled>No status changes allowed</option>
+                  )}
                 </select>
+                {getValidNextStatuses(selectedOrder.status).length === 0 && (
+                  <p className="text-sm text-gray-500 mt-1">
+                    This order cannot be updated further.
+                  </p>
+                )}
               </div>
             </div>
           </div>

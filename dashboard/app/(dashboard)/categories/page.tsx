@@ -1,12 +1,25 @@
 import CategoriesClient from "./CategoriesClient";
-import { getDummyCategories } from "../../../lib/dummy/data";
+import { categoriesApi } from "../../../lib/api/categories.api";
 
 export default async function CategoriesPage() {
-  const categories = getDummyCategories();
+  try {
+    const categories = await categoriesApi.getAll();
+    
+    console.log('Categories fetched:', categories);
 
-  return (
-    <CategoriesClient
-      initialCategories={categories as import('../../../lib/api/categories.api').Category[]}
-    />
-  );
+    return (
+      <CategoriesClient
+        initialCategories={categories || []}
+      />
+    );
+  } catch (error: any) {
+    console.error('Error fetching categories:', error);
+    console.error('Error details:', error.response?.data || error.message);
+    // Fallback to empty data on error
+    return (
+      <CategoriesClient
+        initialCategories={[]}
+      />
+    );
+  }
 }

@@ -1,53 +1,75 @@
 import { create } from 'zustand';
 import { Product } from '@/types';
+import { wishlistApi } from '@/lib/api/wishlist';
+import { getAuthToken } from '@/lib/api/config';
 
 interface WishlistStore {
   items: Product[];
-  addItem: (product: Product) => void;
-  removeItem: (productId: string) => void;
+  loading: boolean;
+  addItem: (product: Product) => Promise<void>;
+  removeItem: (productId: string) => Promise<void>;
   isInWishlist: (productId: string) => boolean;
+  fetchWishlist: () => Promise<void>;
 }
 
-const initialItems: Product[] = [
-  {
-    id: '4',
-    name: 'Men Watch',
-    slug: 'men-watch',
-    price: 17.9,
-    image: '/assets/images/products/product-4.jpg',
-    category: 'Accessories',
-    inStock: true,
-  },
-  {
-    id: '5',
-    name: 'Men Cap',
-    slug: 'men-cap',
-    price: 17.9,
-    image: '/assets/images/products/product-5.jpg',
-    category: 'Accessories',
-    inStock: true,
-  },
-  {
-    id: '6',
-    name: 'Men Black Gentle Belt',
-    slug: 'men-black-gentle-belt',
-    price: 17.9,
-    image: '/assets/images/products/product-6.jpg',
-    category: 'Accessories',
-    inStock: true,
-  },
-];
-
 export const useWishlist = create<WishlistStore>((set, get) => ({
-  items: initialItems,
-  addItem: (product) =>
-    set((state) => {
-      if (state.items.some((p) => p.id === product.id)) return state;
-      return { items: [...state.items, product] };
-    }),
-  removeItem: (productId) =>
-    set((state) => ({
-      items: state.items.filter((p) => p.id !== productId),
-    })),
+  items: [],
+  loading: false,
+  
+  fetchWishlist: async () => {
+    if (!getAuthToken()) {
+      set({ items: [] });
+      return;
+    }
+    
+    try {
+      set({ loading: true });
+      const items = await wishlistApi.getWishlist();
+      set({ items, loading: false });
+    } catch (error) {
+      console.error('Failed to fetch wishlist:', error);
+      set({ loading: false });
+    }
+  },
+
+  addItem: async (product) => {
+    if (!getAuthToken()) {
+      // If not logged in, redirect to login or show message
+      if (typeof window !== 'undefined') {
+        const shouldLogin = confirm('Please login to add items to wishlist. Go to login page?');
+        if (shouldLogin) {
+          window.location.href = '/login';
+        }
+      }
+      return;
+    }
+
+    try {
+      // Get updated wishlist from server
+      const updatedItems = await wishlistApi.addToWishlist(product.id);
+      set({ items: updatedItems });
+    } catch (error: any) {
+      console.error('Failed to add to wishlist:', error);
+      const errorMessage = error?.message || 'Failed to add product to wishlist';
+      if (typeof window !== 'undefined') {
+        alert(errorMessage);
+      }
+      throw error;
+    }
+  },
+
+  removeItem: async (productId) => {
+    if (!getAuthToken()) return;
+
+    try {
+      // Get updated wishlist from server
+      const updatedItems = await wishlistApi.removeFromWishlist(productId);
+      set({ items: updatedItems });
+    } catch (error) {
+      console.error('Failed to remove from wishlist:', error);
+      throw error;
+    }
+  },
+
   isInWishlist: (productId) => get().items.some((p) => p.id === productId),
 }));

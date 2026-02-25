@@ -1,22 +1,41 @@
 import ProductsClient from './ProductsClient';
-import { getDummyProducts, getDummyCategories } from '../../../lib/dummy/data';
+import { productsApi } from '../../../lib/api/products.api';
+import { categoriesApi } from '../../../lib/api/categories.api';
 
 export default async function ProductsPage({
   searchParams,
 }: {
-  searchParams: { page?: string };
+  searchParams: Promise<{ page?: string }>;
 }) {
-  const page = parseInt(searchParams.page || '1');
-  const [productsData, categories] = await Promise.all([
-    Promise.resolve(getDummyProducts({ page, limit: 20 })),
-    Promise.resolve(getDummyCategories()),
-  ]);
+  const params = await searchParams;
+  const page = parseInt(params.page || '1');
+  
+  try {
+    const [productsData, categories] = await Promise.all([
+      productsApi.getAll({ page, limit: 20 }),
+      categoriesApi.getAll(),
+    ]);
 
-  return (
-    <ProductsClient
-      initialProducts={productsData.products as import('../../../lib/api/products.api').Product[]}
-      initialCategories={categories as import('../../../lib/api/categories.api').Category[]}
-      initialPagination={productsData.pagination}
-    />
-  );
+    console.log('Products data:', productsData);
+    console.log('Categories data:', categories);
+
+    return (
+      <ProductsClient
+        initialProducts={productsData.products || []}
+        initialCategories={categories || []}
+        initialPagination={productsData.pagination || { page: 1, limit: 20, total: 0, pages: 0 }}
+      />
+    );
+  } catch (error: any) {
+    console.error('Error fetching products:', error);
+    console.error('Error details:', error.response?.data || error.message);
+    // Fallback to empty data on error
+    return (
+      <ProductsClient
+        initialProducts={[]}
+        initialCategories={[]}
+        initialPagination={{ page: 1, limit: 20, total: 0, pages: 0 }}
+      />
+    );
+  }
 }

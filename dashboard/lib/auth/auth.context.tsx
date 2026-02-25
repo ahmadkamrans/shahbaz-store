@@ -1,13 +1,7 @@
 'use client';
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-
-export interface AdminUser {
-  id: string;
-  name: string;
-  email: string;
-  role: string;
-}
+import { authApi, AdminUser } from '../api/auth.api';
 
 interface AuthContextType {
   user: AdminUser | null;
@@ -17,13 +11,6 @@ interface AuthContextType {
   isAuthenticated: boolean;
 }
 
-const dummyUser: AdminUser = {
-  id: 'admin-1',
-  name: 'Admin User',
-  email: 'admin@example.com',
-  role: 'admin',
-};
-
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
@@ -31,17 +18,34 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // No API: always consider user as logged in with dummy user
-    setUser(dummyUser);
-    setLoading(false);
+    // Check if user is already logged in
+    const checkAuth = async () => {
+      try {
+        const token = typeof window !== 'undefined' ? localStorage.getItem('adminToken') : null;
+        if (token) {
+          const currentUser = await authApi.getCurrentUser();
+          setUser(currentUser);
+        }
+      } catch (error) {
+        // Token invalid or expired, clear it
+        if (typeof window !== 'undefined') {
+          localStorage.removeItem('adminToken');
+        }
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    checkAuth();
   }, []);
 
-  const login = async (_email: string, _password: string) => {
-    // No API: just set dummy user (redirect to dashboard is done by login page)
-    setUser(dummyUser);
+  const login = async (email: string, password: string) => {
+    const response = await authApi.login({ email, password });
+    setUser(response.admin);
   };
 
-  const logout = () => {
+  const logout = async () => {
+    await authApi.logout();
     setUser(null);
     if (typeof window !== 'undefined') {
       window.location.href = '/login';

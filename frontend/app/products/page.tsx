@@ -1,26 +1,81 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
 import { ProductGrid } from "@/components/product/ProductGrid";
 import { Product } from "@/types";
-
-// Demo products
-const products: Product[] = Array.from({ length: 24 }, (_, i) => ({
-  id: `product-${i + 1}`,
-  name: `Product ${i + 1}`,
-  slug: `product-${i + 1}`,
-  price: 49.0 + i * 10,
-  oldPrice: 59.0 + i * 10,
-  image: `/assets/images/products/product-${(i % 24) + 1}.jpg`,
-  category: "Category",
-  rating: 4,
-}));
+import { productsApi } from "@/lib/api/products";
+import { categoriesApi } from "@/lib/api/categories";
+import { Category } from "@/types";
 
 export default function ProductsPage() {
+  const searchParams = useSearchParams();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [sortBy, setSortBy] = useState("default");
+  const [products, setProducts] = useState<Product[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [selectedCategory, setSelectedCategory] = useState<string>("");
+  const [searchQuery, setSearchQuery] = useState<string>("");
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(24);
+  const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
+  const [minPrice, setMinPrice] = useState(0);
+  const [maxPrice, setMaxPrice] = useState(1000);
+  const [selectedSizes, setSelectedSizes] = useState<string[]>([]);
+  const [selectedColors, setSelectedColors] = useState<string[]>([]);
+
+  // Read search query from URL params on mount
+  useEffect(() => {
+    const search = searchParams.get('search');
+    if (search) {
+      setSearchQuery(search);
+    }
+  }, [searchParams]);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        setLoading(true);
+        // Fetch categories
+        const cats = await categoriesApi.getCategories();
+        setCategories(cats);
+
+        // Fetch products
+        const sortMap: Record<string, { sortBy?: string; sortOrder?: 'asc' | 'desc' }> = {
+          default: {},
+          popularity: { sortBy: 'averageRating', sortOrder: 'desc' },
+          rating: { sortBy: 'averageRating', sortOrder: 'desc' },
+          date: { sortBy: 'createdAt', sortOrder: 'desc' },
+          price: { sortBy: 'price', sortOrder: 'asc' },
+          'price-desc': { sortBy: 'price', sortOrder: 'desc' },
+        };
+
+        const sortParams = sortMap[sortBy] || {};
+        const response = await productsApi.getProducts({
+          category: selectedCategory || undefined,
+          search: searchQuery || undefined,
+          page,
+          limit: itemsPerPage,
+          minPrice: minPrice > 0 ? minPrice : undefined,
+          maxPrice: maxPrice < 1000 ? maxPrice : undefined,
+          ...sortParams,
+        });
+
+        setProducts(response.products);
+        setTotalPages(response.totalPages);
+      } catch (error) {
+        console.error("Failed to fetch products:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
+  }, [sortBy, selectedCategory, searchQuery, page, itemsPerPage, minPrice, maxPrice]);
 
   return (
     <main className="main">
@@ -66,14 +121,44 @@ export default function ProductsPage() {
                 <i className="icon-home"></i>
               </Link>
             </li>
-            <li className="breadcrumb-item">
-              <a href="#">Men</a>
-            </li>
-            <li className="breadcrumb-item active" aria-current="page">
-              Accessories
-            </li>
+            {searchQuery && (
+              <>
+                <li className="breadcrumb-item">
+                  <Link href="/products">Products</Link>
+                </li>
+                <li className="breadcrumb-item active" aria-current="page">
+                  Search: "{searchQuery}"
+                </li>
+              </>
+            )}
+            {!searchQuery && selectedCategory && (
+              <>
+                <li className="breadcrumb-item">
+                  <Link href="/products">Products</Link>
+                </li>
+                <li className="breadcrumb-item active" aria-current="page">
+                  {categories.find(c => c.id === selectedCategory)?.name || 'Category'}
+                </li>
+              </>
+            )}
+            {!searchQuery && !selectedCategory && (
+              <li className="breadcrumb-item active" aria-current="page">
+                All Products
+              </li>
+            )}
           </ol>
         </nav>
+
+        {searchQuery && (
+          <div className="search-results-header mb-4">
+            <h2 className="mb-2">
+              Search Results for "{searchQuery}"
+            </h2>
+            <p className="text-muted">
+              {loading ? 'Searching...' : `Found ${products.length} product${products.length !== 1 ? 's' : ''}`}
+            </p>
+          </div>
+        )}
 
         <nav className="toolbox sticky-header">
           <div className="toolbox-left">
@@ -123,7 +208,15 @@ export default function ProductsPage() {
             <div className="toolbox-item toolbox-show">
               <label>Show:</label>
               <div className="select-custom">
-                <select name="count" className="form-control">
+                <select 
+                  name="count" 
+                  className="form-control"
+                  value={itemsPerPage}
+                  onChange={(e) => {
+                    setItemsPerPage(Number(e.target.value));
+                    setPage(1); // Reset to first page when changing items per page
+                  }}
+                >
                   <option value="12">12</option>
                   <option value="24">24</option>
                   <option value="36">36</option>
@@ -132,10 +225,26 @@ export default function ProductsPage() {
             </div>
 
             <div className="toolbox-item layout-modes">
-              <a href="#" className="layout-btn btn-grid active" title="Grid">
+              <a 
+                href="#" 
+                className={`layout-btn btn-grid ${viewMode === 'grid' ? 'active' : ''}`}
+                title="Grid"
+                onClick={(e) => {
+                  e.preventDefault();
+                  setViewMode('grid');
+                }}
+              >
                 <i className="icon-mode-grid"></i>
               </a>
-              <a href="#" className="layout-btn btn-list" title="List">
+              <a 
+                href="#" 
+                className={`layout-btn btn-list ${viewMode === 'list' ? 'active' : ''}`}
+                title="List"
+                onClick={(e) => {
+                  e.preventDefault();
+                  setViewMode('list');
+                }}
+              >
                 <i className="icon-mode-list"></i>
               </a>
             </div>
@@ -143,7 +252,7 @@ export default function ProductsPage() {
         </nav>
 
         <div className="row">
-          {/* <aside
+          <aside
             className={`sidebar-shop sidebar-fixed sidebar-toggle sidebar-${sidebarOpen ? 'opened' : 'closed'}`}
           >
             <div className="sidebar-content-wrapper">
@@ -152,7 +261,18 @@ export default function ProductsPage() {
                   <label>
                     <i className="icon-close"></i>Filters
                   </label>
-                  <a href="#" className="sidebar-toggle-clean">
+                  <a
+                    href="#"
+                    className="sidebar-toggle-clean"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      setMinPrice(0);
+                      setMaxPrice(1000);
+                      setSelectedSizes([]);
+                      setSelectedColors([]);
+                      setPage(1);
+                    }}
+                  >
                     Clean All
                   </a>
                 </div>
@@ -161,19 +281,37 @@ export default function ProductsPage() {
                   <h3 className="widget-title">Filter by Price</h3>
                   <div className="widget-body">
                     <div className="price-slider-wrapper">
-                      <div
-                        id="price-slider"
-                        className="nouislider-price"
-                        data-min="0"
-                        data-max="1000"
-                      ></div>
                       <div className="filter-price-action d-flex align-items-center justify-content-between flex-wrap">
                         <div className="filter-price-text">
-                          <span id="filter-price-range"></span>
+                          <span>${minPrice} - ${maxPrice}</span>
                         </div>
-                        <a href="#" className="btn btn-primary">
-                          Filter
-                        </a>
+                      </div>
+                      <div className="d-flex gap-2 mb-2">
+                        <input
+                          type="number"
+                          className="form-control form-control-sm"
+                          placeholder="Min"
+                          value={minPrice}
+                          onChange={(e) => {
+                            const val = Math.max(0, Number(e.target.value) || 0);
+                            setMinPrice(val);
+                            setPage(1);
+                          }}
+                          min="0"
+                        />
+                        <input
+                          type="number"
+                          className="form-control form-control-sm"
+                          placeholder="Max"
+                          value={maxPrice}
+                          onChange={(e) => {
+                            const val = Math.min(10000, Number(e.target.value) || 1000);
+                            setMaxPrice(val);
+                            setPage(1);
+                          }}
+                          min="0"
+                          max="10000"
+                        />
                       </div>
                     </div>
                   </div>
@@ -183,18 +321,25 @@ export default function ProductsPage() {
                   <h3 className="widget-title">Size</h3>
                   <div className="widget-body">
                     <ul className="cat-list">
-                      <li>
-                        <a href="#">Small</a>
-                      </li>
-                      <li>
-                        <a href="#">Medium</a>
-                      </li>
-                      <li>
-                        <a href="#">Large</a>
-                      </li>
-                      <li>
-                        <a href="#">Extra Large</a>
-                      </li>
+                      {['Small', 'Medium', 'Large', 'Extra Large'].map((size) => (
+                        <li key={size}>
+                          <a
+                            href="#"
+                            className={selectedSizes.includes(size) ? 'active' : ''}
+                            onClick={(e) => {
+                              e.preventDefault();
+                              setSelectedSizes((prev) =>
+                                prev.includes(size)
+                                  ? prev.filter((s) => s !== size)
+                                  : [...prev, size]
+                              );
+                              setPage(1);
+                            }}
+                          >
+                            {size}
+                          </a>
+                        </li>
+                      ))}
                     </ul>
                   </div>
                 </div>
@@ -203,41 +348,65 @@ export default function ProductsPage() {
                   <h3 className="widget-title">Color</h3>
                   <div className="widget-body">
                     <ul className="config-swatch-list">
-                      <li>
-                        <a href="#" className="swatch" data-toggle="tooltip" title="White">
-                          <span style={{ backgroundColor: '#fff' }}></span>
-                        </a>
-                      </li>
-                      <li>
-                        <a href="#" className="swatch" data-toggle="tooltip" title="Black">
-                          <span style={{ backgroundColor: '#000' }}></span>
-                        </a>
-                      </li>
-                      <li>
-                        <a href="#" className="swatch" data-toggle="tooltip" title="Red">
-                          <span style={{ backgroundColor: '#ff0000' }}></span>
-                        </a>
-                      </li>
-                      <li>
-                        <a href="#" className="swatch" data-toggle="tooltip" title="Blue">
-                          <span style={{ backgroundColor: '#0000ff' }}></span>
-                        </a>
-                      </li>
+                      {[
+                        { name: 'White', color: '#fff' },
+                        { name: 'Black', color: '#000' },
+                        { name: 'Red', color: '#ff0000' },
+                        { name: 'Blue', color: '#0000ff' },
+                      ].map((color) => (
+                        <li key={color.name}>
+                          <a
+                            href="#"
+                            className={`swatch ${selectedColors.includes(color.name) ? 'active' : ''}`}
+                            style={{ backgroundColor: color.color }}
+                            onClick={(e) => {
+                              e.preventDefault();
+                              setSelectedColors((prev) =>
+                                prev.includes(color.name)
+                                  ? prev.filter((c) => c !== color.name)
+                                  : [...prev, color.name]
+                              );
+                              setPage(1);
+                            }}
+                            title={color.name}
+                          >
+                            <span></span>
+                          </a>
+                        </li>
+                      ))}
                     </ul>
                   </div>
                 </div>
               </div>
             </div>
-          </aside> */}
+          </aside>
 
-          <div className="col-lg-12 col-xl-12">
-            <ProductGrid products={products} columns={6} />
+          <div className={`col-lg-12 col-xl-12 ${sidebarOpen ? 'col-lg-9 col-xl-9' : ''}`}>
+            {loading ? (
+              <div className="text-center py-5">
+                <p>Loading products...</p>
+              </div>
+            ) : products.length === 0 ? (
+              <div className="text-center py-5">
+                <p>No products found.</p>
+              </div>
+            ) : (
+              <ProductGrid products={products} columns={viewMode === 'grid' ? 6 : 1} viewMode={viewMode} />
+            )}
 
             <nav className="toolbox toolbox-pagination">
               <div className="toolbox-item toolbox-show">
                 <label>Show:</label>
                 <div className="select-custom">
-                  <select name="count" className="form-control">
+                  <select 
+                    name="count" 
+                    className="form-control"
+                    value={itemsPerPage}
+                    onChange={(e) => {
+                      setItemsPerPage(Number(e.target.value));
+                      setPage(1);
+                    }}
+                  >
                     <option value="12">12</option>
                     <option value="24">24</option>
                     <option value="36">36</option>
@@ -246,28 +415,45 @@ export default function ProductsPage() {
               </div>
 
               <ul className="pagination">
-                <li className="page-item disabled">
-                  <a className="page-link page-link-btn" href="#">
+                <li className={`page-item ${page <= 1 ? 'disabled' : ''}`}>
+                  <a
+                    className="page-link page-link-btn"
+                    href="#"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      if (page > 1) setPage(page - 1);
+                    }}
+                  >
                     <i className="icon-angle-left"></i>
                   </a>
                 </li>
-                <li className="page-item active">
-                  <a className="page-link" href="#">
-                    1 <span className="sr-only">(current)</span>
-                  </a>
-                </li>
-                <li className="page-item">
-                  <a className="page-link" href="#">
-                    2
-                  </a>
-                </li>
-                <li className="page-item">
-                  <a className="page-link" href="#">
-                    3
-                  </a>
-                </li>
-                <li className="page-item">
-                  <a className="page-link page-link-btn" href="#">
+                {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                  const pageNum = Math.max(1, Math.min(totalPages - 4, page - 2)) + i;
+                  if (pageNum > totalPages) return null;
+                  return (
+                    <li key={pageNum} className={`page-item ${pageNum === page ? 'active' : ''}`}>
+                      <a
+                        className="page-link"
+                        href="#"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          setPage(pageNum);
+                        }}
+                      >
+                        {pageNum} {pageNum === page && <span className="sr-only">(current)</span>}
+                      </a>
+                    </li>
+                  );
+                })}
+                <li className={`page-item ${page >= totalPages ? 'disabled' : ''}`}>
+                  <a
+                    className="page-link page-link-btn"
+                    href="#"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      if (page < totalPages) setPage(page + 1);
+                    }}
+                  >
                     <i className="icon-angle-right"></i>
                   </a>
                 </li>

@@ -12,9 +12,12 @@ const api = axios.create({
 // Add token to requests
 api.interceptors.request.use(
   (config) => {
-    const token = localStorage.getItem('adminToken');
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
+    // Only access localStorage on client side
+    if (typeof window !== 'undefined') {
+      const token = localStorage.getItem('adminToken');
+      if (token) {
+        config.headers.Authorization = `Bearer ${token}`;
+      }
     }
     // Don't set Content-Type for FormData, let axios set it automatically
     if (config.data instanceof FormData) {
@@ -32,8 +35,11 @@ api.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response?.status === 401) {
-      localStorage.removeItem('adminToken');
-      window.location.href = '/login';
+      // Only access localStorage and window on client side
+      if (typeof window !== 'undefined') {
+        localStorage.removeItem('adminToken');
+        window.location.href = '/login';
+      }
     }
     return Promise.reject(error);
   }

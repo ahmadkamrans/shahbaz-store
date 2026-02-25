@@ -1,6 +1,7 @@
 import HeaderLink from '../models/HeaderLink.js';
 import { AppError } from '../utils/errors.js';
 import { isValidObjectId } from '../utils/helpers.js';
+import { validateHeaderLinkUrl } from '../config/routes.js';
 
 export const getHeaderLinks = async (req, res, next) => {
   try {
@@ -32,6 +33,12 @@ export const getAllHeaderLinks = async (req, res, next) => {
 
 export const createHeaderLink = async (req, res, next) => {
   try {
+    // Validate URL
+    const validation = validateHeaderLinkUrl(req.body.url, req.body.openInNewTab || false);
+    if (!validation.valid) {
+      throw new AppError(validation.error, 400);
+    }
+
     const link = await HeaderLink.create(req.body);
 
     res.status(201).json({
@@ -53,6 +60,17 @@ export const updateHeaderLink = async (req, res, next) => {
 
     if (!link) {
       throw new AppError('Header link not found', 404);
+    }
+
+    // Validate URL if it's being updated
+    if (req.body.url !== undefined) {
+      const openInNewTab = req.body.openInNewTab !== undefined 
+        ? req.body.openInNewTab 
+        : link.openInNewTab;
+      const validation = validateHeaderLinkUrl(req.body.url, openInNewTab);
+      if (!validation.valid) {
+        throw new AppError(validation.error, 400);
+      }
     }
 
     Object.assign(link, req.body);

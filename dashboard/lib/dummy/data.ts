@@ -51,7 +51,7 @@ export interface DummyOrder {
   items: DummyOrderItem[];
   subtotal: number;
   total: number;
-  status: 'pending' | 'processing' | 'shipped' | 'delivered' | 'cancelled';
+  status: 'pending' | 'confirmed' | 'shipped' | 'delivered' | 'cancelled';
   shippingAddress: DummyShippingAddress;
   paymentMethod: string;
   createdAt?: string;
@@ -176,7 +176,7 @@ export const dummyOrders: DummyOrder[] = [
     items: [{ productId: 'prod-2', productName: 'Red Clay Brick Pack', quantity: 3, price: 245 }],
     subtotal: 735,
     total: 760,
-    status: 'processing',
+    status: 'confirmed',
     shippingAddress: { ...dummyShipping, street: '456 Oak Ave', city: 'Boston', state: 'MA', zipCode: '02101' },
     paymentMethod: 'paypal',
     createdAt: '2025-02-18T09:15:00Z',

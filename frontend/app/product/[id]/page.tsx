@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
@@ -12,53 +12,343 @@ import 'swiper/css/free-mode';
 import { Product } from '@/types';
 import { formatPrice } from '@/lib/utils';
 import { useCart } from '@/lib/store/cart-store';
-
-// Demo product data
-const product: Product = {
-  id: '1',
-  name: 'Men Black Sports Shoes',
-  slug: 'men-black-sports-shoes',
-  price: 70.0,
-  oldPrice: 90.0,
-  image: '/assets/images/products/zoom/product-1-big.jpg',
-  images: [
-    '/assets/images/products/zoom/product-1-big.jpg',
-    '/assets/images/products/zoom/product-2-big.jpg',
-    '/assets/images/products/zoom/product-3-big.jpg',
-    '/assets/images/products/zoom/product-4-big.jpg',
-    '/assets/images/products/zoom/product-5-big.jpg',
-  ],
-  category: 'Shoes',
-  rating: 4.5,
-  description: 'Product description here...',
-  inStock: true,
-  sku: 'SKU-001',
-};
-
-const thumbnails = [
-  '/assets/images/products/zoom/product-1.jpg',
-  '/assets/images/products/zoom/product-2.jpg',
-  '/assets/images/products/zoom/product-3.jpg',
-  '/assets/images/products/zoom/product-4.jpg',
-  '/assets/images/products/zoom/product-5.jpg',
-];
+import { useWishlist } from '@/lib/store/wishlist-store';
+import { productsApi } from '@/lib/api/products';
+import { reviewsApi, Review } from '@/lib/api/reviews';
+import { getAuthToken } from '@/lib/api/config';
 
 export default function ProductDetailPage() {
   const params = useParams();
   const { addItem } = useCart();
+  const { addItem: addToWishlist, removeItem, isInWishlist } = useWishlist();
+  const [product, setProduct] = useState<Product | null>(null);
+  const [reviews, setReviews] = useState<Review[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [thumbsSwiper, setThumbsSwiper] = useState<any>(null);
   const [quantity, setQuantity] = useState(1);
   const [activeTab, setActiveTab] = useState('description');
-  const [selectedSize, setSelectedSize] = useState('');
-  const [selectedColor, setSelectedColor] = useState('');
+  const [selectedVariants, setSelectedVariants] = useState<Record<string, string>>({});
+  const [selectedVariant, setSelectedVariant] = useState<any>(null);
+  const [variantPrice, setVariantPrice] = useState<number | null>(null);
+  const [variantStock, setVariantStock] = useState<number | null>(null);
+  const [variantImage, setVariantImage] = useState<string | null>(null);
+  const [reviewForm, setReviewForm] = useState({ rating: 5, title: '', comment: '' });
+  const [submittingReview, setSubmittingReview] = useState(false);
+  const [failedImages, setFailedImages] = useState<Set<string>>(new Set());
+  const [prevProduct, setPrevProduct] = useState<Product | null>(null);
+  const [nextProduct, setNextProduct] = useState<Product | null>(null);
+
+  const productId = params.id as string;
+
+  useEffect(() => {
+    const fetchProduct = async () => {
+      try {
+        setLoading(true);
+        // Backend accepts both ID and slug in the same endpoint
+        const productData = await productsApi.getProduct(productId);
+        setProduct(productData);
+
+        // Fetch reviews
+        const reviewsData = await reviewsApi.getProductReviews(productData.id);
+        setReviews(reviewsData);
+
+        // Fetch related products for navigation
+        try {
+          const relatedProducts = await productsApi.getRelatedProducts(productData.id, 10);
+          const currentIndex = relatedProducts.findIndex(p => p.id === productData.id);
+          
+          if (currentIndex > 0) {
+            setPrevProduct(relatedProducts[currentIndex - 1]);
+          }
+          if (currentIndex < relatedProducts.length - 1 && currentIndex >= 0) {
+            setNextProduct(relatedProducts[currentIndex + 1]);
+          } else if (currentIndex === -1 && relatedProducts.length > 0) {
+            // If current product not in related, use first as next
+            setNextProduct(relatedProducts[0]);
+          }
+        } catch (error) {
+          // If related products fail, try fetching all products
+          try {
+            const allProducts = await productsApi.getProducts({ limit: 100 });
+            const currentIndex = allProducts.products.findIndex(p => p.id === productData.id);
+            
+            if (currentIndex > 0) {
+              setPrevProduct(allProducts.products[currentIndex - 1]);
+            }
+            if (currentIndex < allProducts.products.length - 1 && currentIndex >= 0) {
+              setNextProduct(allProducts.products[currentIndex + 1]);
+            }
+          } catch (err) {
+            console.error('Failed to fetch products for navigation:', err);
+          }
+        }
+      } catch (error: any) {
+        console.error('Failed to fetch product:', error);
+        setError(error?.message || 'Failed to load product. Please try again.');
+        setProduct(null);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    if (productId) {
+      fetchProduct();
+    }
+  }, [productId]);
 
   const handleAddToCart = () => {
-    addItem(product, quantity);
+    if (product) {
+      // Create proper variant object if variants are selected
+      let variantToAdd: any = undefined;
+      if (Object.keys(selectedVariants).length > 0) {
+        const variantAttributes: Record<string, string> = {};
+        Object.entries(selectedVariants).forEach(([type, value]) => {
+          if (value) {
+            // Find the original key casing from product variants
+            const variant = product.variants?.find((v: any) => {
+              if (!v.attributes) return false;
+              const typeKey = Object.keys(v.attributes).find(k => k.toLowerCase() === type);
+              return typeKey && v.attributes[typeKey] === value;
+            });
+            if (variant && variant.attributes) {
+              const originalKey = Object.keys(variant.attributes).find(k => k.toLowerCase() === type);
+              if (originalKey) {
+                variantAttributes[originalKey] = value;
+              }
+            }
+          }
+        });
+        
+        if (Object.keys(variantAttributes).length > 0) {
+          variantToAdd = {
+            id: `${product.id}-${Object.values(selectedVariants).join('-')}`,
+            name: Object.keys(variantAttributes).join(', '),
+            price: variantPrice || product.price,
+            inStock: variantStock !== null ? variantStock > 0 : product.inStock !== false,
+            attributes: variantAttributes,
+          };
+        }
+      }
+      addItem(product, quantity, variantToAdd);
+    }
   };
+
+  // Update variant price, stock, and image when selected variants change
+  useEffect(() => {
+    if (!product?.variants || product.variants.length === 0) {
+      setSelectedVariant(null);
+      setVariantPrice(null);
+      setVariantStock(null);
+      setVariantImage(null);
+      return;
+    }
+
+    // If no variants selected, reset everything
+    if (Object.keys(selectedVariants).length === 0) {
+      setVariantPrice(null);
+      setVariantStock(null);
+      setVariantImage(null);
+      setSelectedVariant(null);
+      return;
+    }
+
+    // Find variants that match all selected variant types
+    const matchingVariants = product.variants.filter((v: any) => {
+      if (!v.attributes) return false;
+      // Check if variant matches all selected variant types
+      return Object.entries(selectedVariants).every(([type, value]) => {
+        if (!value) return false;
+        const typeKey = Object.keys(v.attributes).find(k => k.toLowerCase() === type);
+        return typeKey && v.attributes[typeKey] === value;
+      });
+    });
+
+    // Try to find exact match first (variant with all selected attributes)
+    let matchedVariant = matchingVariants.find((v: any) => {
+      if (!v.attributes) return false;
+      const variantAttributeKeys = Object.keys(v.attributes).map(k => k.toLowerCase());
+      const selectedKeys = Object.keys(selectedVariants);
+      // Exact match: variant has exactly the same attributes as selected
+      return variantAttributeKeys.length === selectedKeys.length &&
+        selectedKeys.every(key => variantAttributeKeys.includes(key));
+    });
+
+    // If no exact match, use the first matching variant
+    if (!matchedVariant && matchingVariants.length > 0) {
+      matchedVariant = matchingVariants[0];
+    }
+
+    let variantStockValue: number | null = null;
+    let variantImageValue: string | null = null;
+    let totalPriceModifier = 0;
+
+    if (matchedVariant) {
+      // Use priceModifier if available, otherwise calculate from price difference
+      if ((matchedVariant as any).priceModifier !== undefined) {
+        totalPriceModifier = (matchedVariant as any).priceModifier;
+      } else {
+        totalPriceModifier = matchedVariant.price - product.price;
+      }
+
+      if ((matchedVariant as any).stock !== undefined) {
+        variantStockValue = (matchedVariant as any).stock;
+      }
+      if ((matchedVariant as any).image) {
+        variantImageValue = (matchedVariant as any).image;
+      }
+    } else {
+      // If no exact match, calculate from individual variant selections
+      // This handles cases where variants are selected separately
+      Object.entries(selectedVariants).forEach(([type, value]) => {
+        if (!value) return;
+        const typeVariants = product.variants.filter((v: any) => {
+          if (!v.attributes) return false;
+          const typeKey = Object.keys(v.attributes).find(k => k.toLowerCase() === type);
+          return typeKey && v.attributes[typeKey] === value;
+        });
+
+        if (typeVariants.length > 0) {
+          const variant = typeVariants[0];
+          // Use priceModifier if available
+          if ((variant as any).priceModifier !== undefined) {
+            totalPriceModifier += (variant as any).priceModifier;
+          } else {
+            totalPriceModifier += (variant.price - product.price);
+          }
+
+          // Use stock/image from first variant if not already set
+          if (variantStockValue === null && (variant as any).stock !== undefined) {
+            variantStockValue = (variant as any).stock;
+          }
+          if (variantImageValue === null && (variant as any).image) {
+            variantImageValue = (variant as any).image;
+          }
+        }
+      });
+    }
+
+    const finalPrice = product.price + totalPriceModifier;
+    setVariantPrice(finalPrice !== product.price ? finalPrice : null);
+    setVariantStock(variantStockValue);
+    setVariantImage(variantImageValue);
+    
+    // Set selected variant info for cart
+    setSelectedVariant({
+      ...selectedVariants,
+      priceModifier: totalPriceModifier,
+      stock: variantStockValue,
+    });
+  }, [selectedVariants, product]);
+
+  const handleToggleWishlist = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    if (!product) return;
+    
+    try {
+      if (isInWishlist(product.id)) {
+        await removeItem(product.id);
+      } else {
+        await addToWishlist(product);
+      }
+    } catch (error) {
+      // Error is already handled in the store
+    }
+  };
+
+  const handleSubmitReview = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!product || !getAuthToken()) {
+      alert('Please login to submit a review');
+      return;
+    }
+
+    // Client-side validation
+    if (reviewForm.comment.trim().length < 10) {
+      alert('Comment must be at least 10 characters long');
+      return;
+    }
+
+    if (reviewForm.rating < 1 || reviewForm.rating > 5) {
+      alert('Rating must be between 1 and 5');
+      return;
+    }
+
+    try {
+      setSubmittingReview(true);
+      await reviewsApi.createReview(product.id, {
+        rating: Number(reviewForm.rating), // Ensure it's a number
+        title: reviewForm.title?.trim() || '',
+        comment: reviewForm.comment.trim(),
+        images: [], // Include images field with empty array
+      });
+      // Refresh reviews
+      const reviewsData = await reviewsApi.getProductReviews(product.id);
+      setReviews(reviewsData);
+      setReviewForm({ rating: 5, title: '', comment: '' });
+      alert('Review submitted successfully!');
+    } catch (error: any) {
+      alert(error.message || 'Failed to submit review');
+    } finally {
+      setSubmittingReview(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <main className="main">
+        <div className="container">
+          <div className="text-center py-5">
+            <p>Loading product...</p>
+          </div>
+        </div>
+      </main>
+    );
+  }
+
+  if (!product && !loading) {
+    return (
+      <main className="main">
+        <div className="container">
+          <div className="text-center py-5">
+            <p>{error || 'Product not found.'}</p>
+            <Link href="/products" className="btn btn-dark">
+              Back to Products
+            </Link>
+          </div>
+        </div>
+      </main>
+    );
+  }
 
   const discount = product.oldPrice
     ? Math.round(((product.oldPrice - product.price) / product.oldPrice) * 100)
     : 0;
+
+  // Handle image load errors
+  const handleImageError = (imgSrc: string) => {
+    setFailedImages(prev => new Set(prev).add(imgSrc));
+  };
+  
+  // Get image source with fallback
+  const defaultImage = '/assets/images/products/product-1.jpg';
+  const getImageSrc = (imgSrc: string) => {
+    if (failedImages.has(imgSrc) || !imgSrc) {
+      return defaultImage;
+    }
+    return imgSrc;
+  };
+
+  // Use fallback image if no images provided, prioritize variant image if available
+  const productImages = product 
+    ? (variantImage 
+        ? [variantImage, ...(product.images && product.images.length > 0 
+            ? product.images.filter(img => img && img.trim() !== '' && img !== variantImage)
+            : (product.image && product.image !== variantImage ? [product.image] : []))]
+        : (product.images && product.images.length > 0 
+            ? product.images.filter(img => img && img.trim() !== '')
+            : (product.image ? [product.image] : [defaultImage])))
+    : [defaultImage];
 
   return (
     <main className="main">
@@ -95,81 +385,93 @@ export default function ProductDetailPage() {
                   thumbs={{ swiper: thumbsSwiper && !thumbsSwiper.destroyed ? thumbsSwiper : null }}
                   className="product-single-carousel show-nav-hover"
                 >
-                  {product.images?.map((img, index) => (
-                    <SwiperSlide key={index}>
-                      <Image
-                        className="product-single-image"
-                        src={img}
-                        alt={product.name}
-                        width={468}
-                        height={468}
-                      />
-                    </SwiperSlide>
-                  ))}
+                  {productImages.map((img, index) => {
+                    const imageSrc = getImageSrc(img);
+                    return (
+                      <SwiperSlide key={index}>
+                        <img
+                          className="product-single-image"
+                          src={imageSrc}
+                          alt={product.name}
+                          onError={() => handleImageError(img)}
+                          style={{ width: '100%', height: 'auto' }}
+                        />
+                      </SwiperSlide>
+                    );
+                  })}
                 </Swiper>
                 <span className="prod-full-screen">
                   <i className="icon-plus"></i>
                 </span>
               </div>
 
-              <Swiper
-                onSwiper={setThumbsSwiper}
-                modules={[FreeMode, Thumbs]}
-                spaceBetween={10}
-                slidesPerView={5}
-                freeMode={true}
-                watchSlidesProgress={true}
-                className="prod-thumbnail"
-              >
-                {thumbnails.map((thumb, index) => (
-                  <SwiperSlide key={index}>
-                    <Image
-                      src={thumb}
-                      width={110}
-                      height={110}
-                      alt={`Thumbnail ${index + 1}`}
-                    />
-                  </SwiperSlide>
-                ))}
-              </Swiper>
+              {productImages.length > 1 && (
+                <Swiper
+                  onSwiper={setThumbsSwiper}
+                  modules={[FreeMode, Thumbs]}
+                  spaceBetween={10}
+                  slidesPerView={Math.min(5, productImages.length)}
+                  freeMode={true}
+                  watchSlidesProgress={true}
+                  className="prod-thumbnail"
+                >
+                  {productImages.map((thumb, index) => {
+                    const thumbSrc = getImageSrc(thumb);
+                    return (
+                      <SwiperSlide key={index}>
+                        <img
+                          src={thumbSrc}
+                          alt={`Thumbnail ${index + 1}`}
+                          onError={() => handleImageError(thumb)}
+                          style={{ width: '110px', height: '110px', objectFit: 'cover' }}
+                        />
+                      </SwiperSlide>
+                    );
+                  })}
+                </Swiper>
+              )}
             </div>
 
             <div className="col-lg-7 col-md-6 product-single-details">
               <h1 className="product-title">{product.name}</h1>
 
               <div className="product-nav">
-                <div className="product-prev">
-                  <a href="#">
-                    <span className="product-link"></span>
-                    <span className="product-popup">
-                      <span className="box-content">
-                        <Image
-                          alt="product"
-                          width={150}
-                          height={150}
-                          src="/assets/images/products/product-3.jpg"
-                        />
-                        <span>Previous Product</span>
+                {prevProduct && (
+                  <div className="product-prev">
+                    <Link href={`/product/${prevProduct.slug || prevProduct.id}`}>
+                      <span className="product-link"></span>
+                      <span className="product-popup">
+                        <span className="box-content">
+                          <Image
+                            alt={prevProduct.name}
+                            width={150}
+                            height={150}
+                            src={prevProduct.image}
+                          />
+                          <span>Previous Product</span>
+                        </span>
                       </span>
-                    </span>
-                  </a>
-                </div>
-                <div className="product-next">
-                  <a href="#">
-                    <span className="product-link"></span>
-                    <span className="product-popup">
-                      <span className="box-content">
-                        <Image
-                          alt="product"
-                          width={150}
-                          height={150}
-                          src="/assets/images/products/product-4.jpg"
-                        />
-                        <span>Next Product</span>
+                    </Link>
+                  </div>
+                )}
+                {nextProduct && (
+                  <div className="product-next">
+                    <Link href={`/product/${nextProduct.slug || nextProduct.id}`}>
+                      <span className="product-link"></span>
+                      <span className="product-popup">
+                        <span className="box-content">
+                          <Image
+                            alt={nextProduct.name}
+                            width={150}
+                            height={150}
+                            src={nextProduct.image}
+                          />
+                          <span>Next Product</span>
+                        </span>
                       </span>
-                    </span>
-                  </a>
-                </div>
+                    </Link>
+                  </div>
+                )}
               </div>
 
               <div className="ratings-container">
@@ -180,8 +482,8 @@ export default function ProductDetailPage() {
                   ></span>
                   <span className="tooltiptext tooltip-top"></span>
                 </div>
-                <a href="#" className="rating-link">
-                  ({product.reviews || 0} Reviews)
+                <a href="#" className="rating-link" onClick={(e) => { e.preventDefault(); setActiveTab('reviews'); }}>
+                  ({reviews.length} Review{reviews.length !== 1 ? 's' : ''})
                 </a>
               </div>
 
@@ -189,7 +491,14 @@ export default function ProductDetailPage() {
                 {product.oldPrice && (
                   <span className="old-price">{formatPrice(product.oldPrice)}</span>
                 )}
-                <span className="product-price">{formatPrice(product.price)}</span>
+                <span className="product-price">
+                  {formatPrice(variantPrice || product.price)}
+                </span>
+                {variantPrice && variantPrice !== product.price && (
+                  <small className="text-muted d-block">
+                    Original: {formatPrice(product.price)}
+                  </small>
+                )}
               </div>
 
               <div className="product-desc">
@@ -197,55 +506,177 @@ export default function ProductDetailPage() {
               </div>
 
               <div className="product-filters-container">
-                <div className="product-single-filter">
-                  <label>Size:</label>
-                  <ul className="config-size-list">
-                    {['S', 'M', 'L', 'XL'].map((size) => (
-                      <li key={size}>
-                        <a
-                          href="#"
-                          className={`${selectedSize === size ? 'active' : ''}`}
-                          onClick={(e) => {
-                            e.preventDefault();
-                            setSelectedSize(size);
-                          }}
-                        >
-                          {size}
-                        </a>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
+                {(() => {
+                  // Extract variant types and options from product variants
+                  if (!product.variants || product.variants.length === 0) {
+                    return null;
+                  }
 
-                <div className="product-single-filter">
-                  <label>Color:</label>
-                  <ul className="config-swatch-list">
-                    {[
-                      { name: 'Black', color: '#000' },
-                      { name: 'White', color: '#fff' },
-                      { name: 'Red', color: '#ff0000' },
-                    ].map((color) => (
-                      <li key={color.name}>
-                        <a
-                          href="#"
-                          className={`swatch ${selectedColor === color.name ? 'active' : ''}`}
-                          style={{ backgroundColor: color.color }}
-                          onClick={(e) => {
-                            e.preventDefault();
-                            setSelectedColor(color.name);
-                          }}
-                          title={color.name}
-                        >
-                          <span></span>
-                        </a>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
+                  // Group variants by type (Size, Color, etc.) - case insensitive, preserve original key
+                  const variantGroups: Record<string, { values: Set<string>, originalKey: string }> = {};
+                  product.variants.forEach((v: any) => {
+                    if (v.attributes) {
+                      Object.entries(v.attributes).forEach(([key, value]) => {
+                        // Normalize key to lowercase for consistent lookup
+                        const normalizedKey = key.toLowerCase();
+                        if (!variantGroups[normalizedKey]) {
+                          variantGroups[normalizedKey] = {
+                            values: new Set(),
+                            originalKey: key // Preserve original casing
+                          };
+                        }
+                        variantGroups[normalizedKey].values.add(value as string);
+                      });
+                    }
+                  });
+
+                  // Get all variant types dynamically
+                  const variantTypes = Object.keys(variantGroups);
+                  
+                  if (variantTypes.length === 0) {
+                    return null;
+                  }
+
+                  // Color mapping helper
+                  const getColorValue = (colorName: string): string => {
+                    const colorMap: Record<string, string> = {
+                      'Black': '#000000', 'black': '#000000',
+                      'White': '#ffffff', 'white': '#ffffff',
+                      'Red': '#ff0000', 'red': '#ff0000',
+                      'Blue': '#0000ff', 'blue': '#0000ff',
+                      'Green': '#00ff00', 'green': '#00ff00',
+                      'Yellow': '#ffff00', 'yellow': '#ffff00',
+                      'Orange': '#ffa500', 'orange': '#ffa500',
+                      'Purple': '#800080', 'purple': '#800080',
+                      'Pink': '#ffc0cb', 'pink': '#ffc0cb',
+                      'Gray': '#808080', 'grey': '#808080', 'gray': '#808080',
+                      'Brown': '#a52a2a', 'brown': '#a52a2a',
+                      'Navy': '#000080', 'navy': '#000080',
+                    };
+                    return colorMap[colorName] || '#cccccc';
+                  };
+                  
+                  // Build the JSX array directly
+                  const variantSelectors = variantTypes.map((normalizedType) => {
+                    const variantGroup = variantGroups[normalizedType];
+                    const variantSet = variantGroup.values;
+                    const originalKey = variantGroup.originalKey;
+                    const displayName = originalKey.charAt(0).toUpperCase() + originalKey.slice(1);
+                    const isColorType = normalizedType === 'color';
+                    const selectedValue = selectedVariants[normalizedType] || '';
+
+                    return (
+                      <div key={normalizedType} className="product-single-filter" style={{ display: 'flex', alignItems: 'center', marginBottom: '1rem' }}>
+                        <label style={{ marginRight: '4.2rem', minWidth: '5rem', marginBottom: 0, color: '#777', fontWeight: 400 }}>{displayName}:</label>
+                        {isColorType ? (
+                          <ul className="config-swatch-list">
+                            {Array.from(variantSet).map((value: string) => {
+                              const matchingVariants = product.variants.filter((v: any) => {
+                                if (!v.attributes) return false;
+                                const typeKey = Object.keys(v.attributes).find(k => k.toLowerCase() === normalizedType);
+                                return typeKey && v.attributes[typeKey] === value;
+                              });
+                              const isAvailable = matchingVariants.some((v: any) => 
+                                v.inStock !== false && ((v as any).stock === undefined || (v as any).stock > 0)
+                              );
+                              const colorValue = getColorValue(value);
+                              
+                              return (
+                                <li key={value}>
+                                  <a
+                                    href="#"
+                                    className={`swatch ${selectedValue === value ? 'active' : ''} ${!isAvailable ? 'disabled' : ''}`}
+                                    style={{ 
+                                      backgroundColor: colorValue,
+                                      opacity: !isAvailable ? 0.5 : 1,
+                                      cursor: !isAvailable ? 'not-allowed' : 'pointer'
+                                    }}
+                                    onClick={(e) => {
+                                      e.preventDefault();
+                                      if (isAvailable) {
+                                        setSelectedVariants(prev => ({
+                                          ...prev,
+                                          [normalizedType]: value
+                                        }));
+                                      }
+                                    }}
+                                    title={value}
+                                  >
+                                    <span></span>
+                                  </a>
+                                </li>
+                              );
+                            })}
+                          </ul>
+                        ) : (
+                          <ul className="config-size-list" style={{ display: 'block', listStyle: 'none', padding: 0, margin: 0, fontSize: 0, lineHeight: 0 }}>
+                            {Array.from(variantSet).map((value: string) => {
+                              const matchingVariants = product.variants.filter((v: any) => {
+                                if (!v.attributes) return false;
+                                const typeKey = Object.keys(v.attributes).find(k => k.toLowerCase() === normalizedType);
+                                return typeKey && v.attributes[typeKey] === value;
+                              });
+                              const isAvailable = matchingVariants.some((v: any) => 
+                                v.inStock !== false && ((v as any).stock === undefined || (v as any).stock > 0)
+                              );
+                              
+                              return (
+                                <li key={value} className={selectedValue === value ? 'active' : ''} style={{ display: 'inline-flex', fontSize: '1.4rem', verticalAlign: 'top', marginBottom: 0, marginRight: 0, color: '#777' }}>
+                                  <a
+                                    href="#"
+                                    className={!isAvailable ? 'disabled' : ''}
+                                    onClick={(e) => {
+                                      e.preventDefault();
+                                      if (isAvailable) {
+                                        setSelectedVariants(prev => ({
+                                          ...prev,
+                                          [normalizedType]: value
+                                        }));
+                                      }
+                                    }}
+                                    style={{
+                                      display: 'block',
+                                      minWidth: '3.2rem',
+                                      height: '2.6rem',
+                                      lineHeight: '2.6rem',
+                                      textAlign: 'center',
+                                      textDecoration: 'none',
+                                      margin: '3px 6px 3px 0',
+                                      border: '1px solid #eee',
+                                      color: 'inherit',
+                                      ...(!isAvailable ? { cursor: 'not-allowed', opacity: 0.5 } : { cursor: 'pointer' })
+                                    }}
+                                  >
+                                    {value}
+                                  </a>
+                                </li>
+                              );
+                            })}
+                          </ul>
+                        )}
+                      </div>
+                    );
+                  });
+                  
+                  return (
+                    <>
+                      {variantSelectors}
+                    </>
+                  );
+                })()}
               </div>
 
-              <div className="product-action">
-                <div className="product-single-qty">
+              {/* Show stock status */}
+              {variantStock !== null && (
+                <div className="product-stock-info mb-3">
+                  <span className={`badge ${variantStock > 0 ? 'badge-success' : 'badge-danger'}`}>
+                    {variantStock > 0 ? `In Stock (${variantStock} available)` : 'Out of Stock'}
+                  </span>
+                </div>
+              )}
+
+              <div className="product-action" style={{ display: 'flex', alignItems: 'stretch', gap: '10px', flexWrap: 'nowrap' }}>
+                <div className="product-single-qty" style={{ display: 'flex', alignItems: 'stretch' }}>
                   <input
                     className="horizontal-quantity form-control"
                     type="number"
@@ -260,13 +691,77 @@ export default function ProductDetailPage() {
                   className="btn btn-dark add-cart"
                   onClick={(e) => {
                     e.preventDefault();
+                    // Check if variants are required but not selected
+                    const hasVariants = product.variants && product.variants.length > 0;
+                    if (hasVariants) {
+                      // Get all variant types dynamically
+                      const variantGroups: Record<string, Set<string>> = {};
+                      product.variants.forEach((v: any) => {
+                        if (v.attributes) {
+                          Object.entries(v.attributes).forEach(([key, value]) => {
+                            const normalizedKey = key.toLowerCase();
+                            if (!variantGroups[normalizedKey]) {
+                              variantGroups[normalizedKey] = new Set();
+                            }
+                            variantGroups[normalizedKey].add(value as string);
+                          });
+                        }
+                      });
+                      
+                      // Check if all required variant types are selected
+                      const variantTypes = Object.keys(variantGroups);
+                      const missingVariants = variantTypes.filter(type => {
+                        return !selectedVariants[type] || !selectedVariants[type].trim();
+                      });
+                      
+                      if (missingVariants.length > 0) {
+                        const missingNames = missingVariants.map(type => {
+                          // Find original casing from product variants
+                          const variant = product.variants.find((v: any) => {
+                            if (!v.attributes) return false;
+                            return Object.keys(v.attributes).some(k => k.toLowerCase() === type);
+                          });
+                          if (variant && variant.attributes) {
+                            const originalKey = Object.keys(variant.attributes).find(k => k.toLowerCase() === type);
+                            return originalKey || type;
+                          }
+                          return type.charAt(0).toUpperCase() + type.slice(1);
+                        });
+                        alert(`Please select: ${missingNames.join(', ')}`);
+                        return;
+                      }
+                      
+                      // Check stock availability
+                      if (variantStock !== null && variantStock === 0) {
+                        alert('This variant is out of stock');
+                        return;
+                      }
+                    }
                     handleAddToCart();
                   }}
+                  style={{ 
+                    margin: '0', 
+                    display: 'inline-flex', 
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    whiteSpace: 'nowrap'
+                  }}
                 >
-                  <i className="icon-shopping-cart"></i>Add to Cart
+                  {variantStock !== null && variantStock === 0 ? 'Out of Stock' : 'Add to Cart'}
                 </a>
 
-                <a href="/wishlist" className="btn-icon-wish" title="Add to Wishlist">
+                <a
+                  href="#"
+                  className={`btn-icon-wish ${product && isInWishlist(product.id) ? 'added-wishlist' : ''}`}
+                  title={product && isInWishlist(product.id) ? "Remove from Wishlist" : "Add to Wishlist"}
+                  onClick={handleToggleWishlist}
+                  style={{ 
+                    marginLeft: '0',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    justifyContent: 'center'
+                  }}
+                >
                   <i className="icon-heart"></i>
                 </a>
               </div>
@@ -274,14 +769,47 @@ export default function ProductDetailPage() {
               <div className="product-single-share">
                 <label className="sr-only">Share:</label>
                 <div className="social-icons mt-2">
-                  <a href="#" className="social-icon" target="_blank" title="Facebook">
+                  <a
+                    href={`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(
+                      typeof window !== 'undefined' ? window.location.href : ''
+                    )}`}
+                    className="social-icon"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    title="Share on Facebook"
+                  >
                     <i className="icon-facebook"></i>
                   </a>
-                  <a href="#" className="social-icon" target="_blank" title="Twitter">
+                  <a
+                    href={`https://twitter.com/intent/tweet?url=${encodeURIComponent(
+                      typeof window !== 'undefined' ? window.location.href : ''
+                    )}&text=${encodeURIComponent(product.name)}`}
+                    className="social-icon"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    title="Share on Twitter"
+                  >
                     <i className="icon-twitter"></i>
                   </a>
-                  <a href="#" className="social-icon" target="_blank" title="Instagram">
-                    <i className="icon-instagram"></i>
+                  <a
+                    href={`https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(
+                      typeof window !== 'undefined' ? window.location.href : ''
+                    )}`}
+                    className="social-icon"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    title="Share on LinkedIn"
+                  >
+                    <i className="icon-linkedin"></i>
+                  </a>
+                  <a
+                    href={`mailto:?subject=${encodeURIComponent(product.name)}&body=${encodeURIComponent(
+                      `Check out this product: ${typeof window !== 'undefined' ? window.location.href : ''}`
+                    )}`}
+                    className="social-icon"
+                    title="Share via Email"
+                  >
+                    <i className="icon-envelope"></i>
                   </a>
                 </div>
               </div>
@@ -309,7 +837,7 @@ export default function ProductDetailPage() {
                     setActiveTab('reviews');
                   }}
                 >
-                  Reviews (2)
+                  Reviews ({reviews.length})
                 </a>
               </li>
             </ul>
@@ -320,35 +848,96 @@ export default function ProductDetailPage() {
               >
                 <div className="product-desc-content">
                   <p>{product.description}</p>
-                  <p>
-                    Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor
-                    incididunt ut labore et dolore magna aliqua.
-                  </p>
                 </div>
               </div>
               <div className={`tab-pane fade ${activeTab === 'reviews' ? 'show active' : ''}`}>
                 <div className="reviews">
-                  <h3>2 Reviews for {product.name}</h3>
-                  <div className="review">
-                    <div className="row no-gutters">
-                      <div className="col-auto">
-                        <h4>
-                          <a href="#">John Doe</a>
-                        </h4>
-                        <div className="ratings-container">
-                          <div className="product-ratings">
-                            <span className="ratings" style={{ width: '100%' }}></span>
+                  <h3>{reviews.length} Review{reviews.length !== 1 ? 's' : ''} for {product.name}</h3>
+                  
+                  {reviews.length === 0 ? (
+                    <p>No reviews yet. Be the first to review this product!</p>
+                  ) : (
+                    reviews.map((review) => (
+                      <div key={review._id} className="review">
+                        <div className="row no-gutters">
+                          <div className="col-auto">
+                            <h4>
+                              <a href="#">{review.user.name}</a>
+                            </h4>
+                            <div className="ratings-container">
+                              <div className="product-ratings">
+                                <span className="ratings" style={{ width: `${review.rating * 20}%` }}></span>
+                              </div>
+                            </div>
+                            <span className="review-date">
+                              {new Date(review.createdAt).toLocaleDateString()}
+                            </span>
+                          </div>
+                          <div className="col">
+                            <div className="review-content">
+                              {review.title && <h5>{review.title}</h5>}
+                              <p>{review.comment}</p>
+                            </div>
                           </div>
                         </div>
-                        <span className="review-date">22 March, 2018</span>
                       </div>
-                      <div className="col">
-                        <div className="review-content">
-                          <p>Excellent product!</p>
+                    ))
+                  )}
+
+                  {getAuthToken() && (
+                    <div className="review-form mt-4">
+                      <h4>Add a Review</h4>
+                      <form onSubmit={handleSubmitReview}>
+                        <div className="form-group">
+                          <label>Rating *</label>
+                          <select
+                            className="form-control"
+                            value={reviewForm.rating}
+                            onChange={(e) => setReviewForm({ ...reviewForm, rating: parseInt(e.target.value) })}
+                            required
+                          >
+                            <option value={5}>5 Stars</option>
+                            <option value={4}>4 Stars</option>
+                            <option value={3}>3 Stars</option>
+                            <option value={2}>2 Stars</option>
+                            <option value={1}>1 Star</option>
+                          </select>
                         </div>
-                      </div>
+                        <div className="form-group">
+                          <label>Title (optional)</label>
+                          <input
+                            type="text"
+                            className="form-control"
+                            value={reviewForm.title}
+                            onChange={(e) => setReviewForm({ ...reviewForm, title: e.target.value })}
+                          />
+                        </div>
+                        <div className="form-group">
+                          <label>Comment * (minimum 10 characters)</label>
+                          <textarea
+                            className="form-control"
+                            rows={5}
+                            value={reviewForm.comment}
+                            onChange={(e) => setReviewForm({ ...reviewForm, comment: e.target.value })}
+                            required
+                            minLength={10}
+                          />
+                          {reviewForm.comment.length > 0 && reviewForm.comment.length < 10 && (
+                            <small className="text-danger">
+                              {10 - reviewForm.comment.length} more characters required
+                            </small>
+                          )}
+                        </div>
+                        <button
+                          type="submit"
+                          className="btn btn-dark"
+                          disabled={submittingReview}
+                        >
+                          {submittingReview ? 'Submitting...' : 'Submit Review'}
+                        </button>
+                      </form>
                     </div>
-                  </div>
+                  )}
                 </div>
               </div>
             </div>

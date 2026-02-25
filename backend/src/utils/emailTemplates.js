@@ -26,7 +26,7 @@ export const orderConfirmationTemplate = (order) => {
           <div class="order-details">
             <h3>Order Details</h3>
             <p><strong>Order ID:</strong> ${orderId}</p>
-            <p><strong>Total Amount:</strong> $${totalAmount}</p>
+            <p><strong>Total Amount:</strong> Rs ${totalAmount}</p>
             <p><strong>Status:</strong> ${status}</p>
           </div>
         </div>
@@ -69,7 +69,7 @@ export const restockAlertTemplate = (product, user) => {
           <p>Great news! The product you were interested in is now back in stock.</p>
           <div class="product-details">
             <h3>${productName}</h3>
-            <p><strong>Price:</strong> $${productPrice}</p>
+            <p><strong>Price:</strong> Rs ${productPrice}</p>
             <a href="${frontendUrl}/products/${productSlug}" class="button">View Product</a>
           </div>
         </div>

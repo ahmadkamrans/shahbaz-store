@@ -5,6 +5,7 @@ import { headerLinksApi, HeaderLink } from "../../../lib/api/headerLinks.api";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { FaArrowUp, FaArrowDown } from "react-icons/fa";
+import { VALID_INTERNAL_ROUTES, validateHeaderLinkUrl } from "../../../lib/config/routes";
 
 interface HeaderLinksClientProps {
   initialLinks: HeaderLink[];
@@ -17,43 +18,109 @@ export default function HeaderLinksClient({
   const [links, setLinks] = useState<HeaderLink[]>(initialLinks);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingLink, setEditingLink] = useState<HeaderLink | null>(null);
-  const [formData, setFormData] = useState({ label: "", href: "" });
+  const [formData, setFormData] = useState({ label: "", href: "", openInNewTab: false });
+  const [urlError, setUrlError] = useState("");
+  const [isUrlExternal, setIsUrlExternal] = useState(false);
   const [reorderingId, setReorderingId] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
     setLinks(initialLinks);
   }, [initialLinks]);
 
-  const refreshLinks = () => {
-    router.refresh();
+  const fetchLinks = async () => {
+    try {
+      setIsLoading(true);
+      const fetchedLinks = await headerLinksApi.getAll();
+      setLinks(fetchedLinks);
+    } catch (error) {
+      console.error('Error fetching links:', error);
+      toast.error("Failed to refresh links");
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const resetForm = () => {
-    setFormData({ label: "", href: "" });
+    setFormData({ label: "", href: "", openInNewTab: false });
     setEditingLink(null);
+    setUrlError("");
+    setIsUrlExternal(false);
+  };
+
+  const handleUrlChange = (url: string) => {
+    setFormData({ ...formData, href: url });
+    setUrlError("");
+    
+    // Check if it's an external URL
+    const isExternal = url.startsWith('http://') || url.startsWith('https://');
+    setIsUrlExternal(isExternal);
+    
+    // If external, automatically enable openInNewTab
+    if (isExternal) {
+      setFormData({ ...formData, href: url, openInNewTab: true });
+    }
+    
+    // Validate URL
+    const validation = validateHeaderLinkUrl(url, isExternal || formData.openInNewTab);
+    if (!validation.valid && url.trim() !== '') {
+      setUrlError(validation.error || "Invalid URL");
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Validate URL before submitting
+    const validation = validateHeaderLinkUrl(
+      formData.href, 
+      isUrlExternal || formData.openInNewTab
+    );
+    
+    if (!validation.valid) {
+      setUrlError(validation.error || "Invalid URL");
+      toast.error(validation.error || "Please fix the URL before saving");
+      return;
+    }
+    
     try {
+      const submitData = {
+        label: formData.label,
+        href: formData.href,
+        openInNewTab: isUrlExternal || formData.openInNewTab
+      };
+      
       if (editingLink) {
-        await headerLinksApi.update(editingLink.id!, formData);
+        await headerLinksApi.update(editingLink.id!, submitData);
         toast.success("Header link updated!");
       } else {
-        await headerLinksApi.create(formData);
+        await headerLinksApi.create(submitData);
         toast.success("Header link created!");
       }
       setIsModalOpen(false);
       resetForm();
-      refreshLinks();
-    } catch {
-      toast.error("Failed to save");
+      await fetchLinks();
+      router.refresh();
+    } catch (error: any) {
+      console.error('Error saving link:', error);
+      const errorMessage = error.response?.data?.message || error.response?.data?.errors?.[0]?.message || "Failed to save";
+      toast.error(errorMessage);
+      if (error.response?.data?.errors?.[0]?.field === 'url') {
+        setUrlError(error.response.data.errors[0].message);
+      }
     }
   };
 
   const handleEdit = (link: HeaderLink) => {
     setEditingLink(link);
-    setFormData({ label: link.label, href: link.href });
+    const isExternal = link.href.startsWith('http://') || link.href.startsWith('https://');
+    setFormData({ 
+      label: link.label, 
+      href: link.href,
+      openInNewTab: link.openInNewTab || isExternal
+    });
+    setIsUrlExternal(isExternal);
+    setUrlError("");
     setIsModalOpen(true);
   };
 
@@ -62,9 +129,11 @@ export default function HeaderLinksClient({
     try {
       await headerLinksApi.delete(id);
       toast.success("Header link removed!");
-      refreshLinks();
-    } catch {
-      toast.error("Failed to delete");
+      await fetchLinks();
+      router.refresh();
+    } catch (error: any) {
+      console.error('Error deleting link:', error);
+      toast.error(error.response?.data?.message || "Failed to delete");
     }
   };
 
@@ -72,7 +141,11 @@ export default function HeaderLinksClient({
     setReorderingId(id);
     try {
       await headerLinksApi.reorder(id, direction);
-      refreshLinks();
+      await fetchLinks();
+      router.refresh();
+    } catch (error: any) {
+      console.error('Error reordering:', error);
+      toast.error(error.response?.data?.message || "Failed to reorder");
     } finally {
       setReorderingId(null);
     }
@@ -99,6 +172,10 @@ export default function HeaderLinksClient({
         Reorder links with the up/down arrows. Changes apply to the storefront
         header.
       </p>
+
+      {isLoading && (
+        <div className="text-center py-4 text-gray-500">Loading...</div>
+      )}
 
       <div className="bg-white shadow overflow-hidden sm:rounded-md">
         <table className="min-w-full divide-y divide-gray-200">
@@ -136,7 +213,7 @@ export default function HeaderLinksClient({
                       <button
                         type="button"
                         onClick={() => handleReorder(link.id!, "up")}
-                        disabled={index === 0 || reorderingId === link.id}
+                        disabled={index === 0 || reorderingId === link.id || isLoading}
                         className="p-1 rounded hover:bg-gray-100 disabled:opacity-40 disabled:cursor-not-allowed text-gray-600"
                         title="Move up"
                       >
@@ -146,7 +223,7 @@ export default function HeaderLinksClient({
                         type="button"
                         onClick={() => handleReorder(link.id!, "down")}
                         disabled={
-                          index === links.length - 1 || reorderingId === link.id
+                          index === links.length - 1 || reorderingId === link.id || isLoading
                         }
                         className="p-1 rounded hover:bg-gray-100 disabled:opacity-40 disabled:cursor-not-allowed text-gray-600"
                         title="Move down"
@@ -165,12 +242,14 @@ export default function HeaderLinksClient({
                     <button
                       onClick={() => handleEdit(link)}
                       className="text-custom-blue hover:text-custom-blue-light mr-4"
+                      disabled={isLoading}
                     >
                       Edit
                     </button>
                     <button
                       onClick={() => handleDelete(link.id!)}
                       className="text-red-600 hover:text-red-900"
+                      disabled={isLoading}
                     >
                       Delete
                     </button>
@@ -208,17 +287,63 @@ export default function HeaderLinksClient({
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   URL *
                 </label>
-                <input
-                  type="text"
-                  required
-                  value={formData.href}
-                  onChange={(e) =>
-                    setFormData({ ...formData, href: e.target.value })
-                  }
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md"
-                  placeholder="e.g. / or /shop"
-                />
+                <div>
+                  <select
+                    value={formData.href.startsWith('http') ? '' : formData.href}
+                    onChange={(e) => {
+                      if (e.target.value) {
+                        handleUrlChange(e.target.value);
+                      }
+                    }}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md mb-2"
+                  >
+                    <option value="">Select a route or enter custom URL</option>
+                    {VALID_INTERNAL_ROUTES.map((route) => (
+                      <option key={route.value} value={route.value}>
+                        {route.label} ({route.value})
+                      </option>
+                    ))}
+                  </select>
+                  <input
+                    type="text"
+                    required
+                    value={formData.href}
+                    onChange={(e) => handleUrlChange(e.target.value)}
+                    className={`w-full px-3 py-2 border rounded-md ${
+                      urlError ? 'border-red-500' : 'border-gray-300'
+                    }`}
+                    placeholder="e.g. /products or https://example.com"
+                  />
+                  {urlError && (
+                    <p className="text-red-500 text-sm mt-1">{urlError}</p>
+                  )}
+                  {isUrlExternal && (
+                    <p className="text-blue-500 text-sm mt-1">
+                      External URLs will automatically open in a new tab
+                    </p>
+                  )}
+                  <p className="text-gray-500 text-xs mt-1">
+                    Valid patterns: /product/[id], /orders/[id]
+                  </p>
+                </div>
               </div>
+              {!isUrlExternal && (
+                <div>
+                  <label className="flex items-center">
+                    <input
+                      type="checkbox"
+                      checked={formData.openInNewTab}
+                      onChange={(e) =>
+                        setFormData({ ...formData, openInNewTab: e.target.checked })
+                      }
+                      className="mr-2"
+                    />
+                    <span className="text-sm text-gray-700">
+                      Open in new tab
+                    </span>
+                  </label>
+                </div>
+              )}
               <div className="flex justify-end space-x-3 pt-4">
                 <button
                   type="button"
@@ -227,12 +352,14 @@ export default function HeaderLinksClient({
                     resetForm();
                   }}
                   className="px-4 py-2 border rounded hover:bg-gray-50"
+                  disabled={isLoading}
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 bg-custom-blue text-white rounded hover:bg-custom-blue-light"
+                  className="px-4 py-2 bg-custom-blue text-white rounded hover:bg-custom-blue-light disabled:opacity-50"
+                  disabled={isLoading}
                 >
                   {editingLink ? "Update" : "Create"}
                 </button>

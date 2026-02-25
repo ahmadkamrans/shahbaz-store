@@ -47,6 +47,7 @@ const productSchema = new mongoose.Schema({
     ref: 'Category',
     required: [true, 'Category is required']
   },
+  image: String,
   images: [String],
   variants: {
     type: Map,
@@ -160,6 +161,24 @@ const generateVariantBarcode = (productBarcode, variantIndex) => {
 // Generate slug and barcode before saving
 productSchema.pre('save', async function(next) {
   try {
+    // Validate variant/price relationship
+    const hasVariants = this.variants && this.variants.size > 0;
+    
+    // Price is always required:
+    // - If product has variants: price is the base price
+    // - If product has NO variants: price is the actual selling price
+    if (this.price === undefined || this.price === null) {
+      return next(new Error('Product price is required'));
+    }
+    
+    if (this.price < 0) {
+      return next(new Error('Product price cannot be negative'));
+    }
+    
+    // If product has variants, price is treated as basePrice
+    // Variants calculate their price as: basePrice + priceModifier
+    // This is enforced logically - the price field serves dual purpose
+    
     // Generate slug if not provided
     if (this.isModified('name') && !this.slug) {
       this.slug = this.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');

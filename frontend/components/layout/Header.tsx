@@ -1,17 +1,55 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { usePathname } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
 import { Cart } from '../common/Cart';
 import { Search } from '../common/Search';
 import { MobileMenu } from './MobileMenu';
+import { useCart } from '@/lib/store/cart-store';
+import { headerLinksApi, HeaderLink } from '@/lib/api/headerLinks';
 
 export function Header() {
+  const pathname = usePathname();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [cartOpen, setCartOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [activeMenu, setActiveMenu] = useState<string | null>(null);
+  const [headerLinks, setHeaderLinks] = useState<HeaderLink[]>([]);
+  const [linksLoading, setLinksLoading] = useState(true);
+  const { initializeCart } = useCart();
+
+  // Fetch header links from API
+  useEffect(() => {
+    const fetchLinks = async () => {
+      try {
+        const links = await headerLinksApi.getAll();
+        setHeaderLinks(links);
+      } catch (error) {
+        console.error('Error fetching header links:', error);
+        // Fallback to empty array on error
+        setHeaderLinks([]);
+      } finally {
+        setLinksLoading(false);
+      }
+    };
+
+    fetchLinks();
+  }, []);
+
+  // Determine active page based on pathname
+  const isLinkActive = (url: string) => {
+    if (url === '/') {
+      return pathname === '/';
+    }
+    return pathname?.startsWith(url);
+  };
+
+  // Initialize cart from localStorage on mount
+  useEffect(() => {
+    initializeCart();
+  }, [initializeCart]);
 
   // Sync body class so theme CSS shows cart as right sidebar/canvas with overlay
   useEffect(() => {
@@ -31,68 +69,26 @@ export function Header() {
           <div className="header-left pl-0">
             <nav className="main-nav w-100">
               <ul className="menu">
-                <li className="active">
-                  <Link href="/">Home</Link>
-                </li>
-                <li
-                  onMouseEnter={() => setActiveMenu('products')}
-                  onMouseLeave={() => setActiveMenu(null)}
-                >
-                  <Link href="/products">Products</Link>
-                  {activeMenu === 'products' && (
-                    <div className="megamenu megamenu-fixed-width">
-                      <div className="row">
-                        <div className="col-lg-4">
-                          <a href="#" className="nolink">PRODUCT PAGES</a>
-                          <ul className="submenu">
-                            <li><Link href="/product/1">SIMPLE PRODUCT</Link></li>
-                            <li><Link href="/product/1">VARIABLE PRODUCT</Link></li>
-                            <li><Link href="/product/1">SALE PRODUCT</Link></li>
-                            <li><Link href="/product/1">FEATURED & ON SALE</Link></li>
-                            <li><Link href="/product/1">WITH CUSTOM TAB</Link></li>
-                            <li><Link href="/product/1">WITH LEFT SIDEBAR</Link></li>
-                            <li><Link href="/product/1">WITH RIGHT SIDEBAR</Link></li>
-                            <li><Link href="/product/1">ADD CART STICKY</Link></li>
-                          </ul>
-                        </div>
-                        <div className="col-lg-4">
-                          <a href="#" className="nolink">PRODUCT LAYOUTS</a>
-                          <ul className="submenu">
-                            <li><Link href="/product/1">EXTENDED LAYOUT</Link></li>
-                            <li><Link href="/product/1">GRID IMAGE</Link></li>
-                            <li><Link href="/product/1">FULL WIDTH LAYOUT</Link></li>
-                            <li><Link href="/product/1">STICKY INFO</Link></li>
-                            <li><Link href="/product/1">LEFT & RIGHT STICKY</Link></li>
-                            <li><Link href="/product/1">TRANSPARENT IMAGE</Link></li>
-                            <li><Link href="/product/1">CENTER VERTICAL</Link></li>
-                            <li><Link href="/product/1">BUILD YOUR OWN</Link></li>
-                          </ul>
-                        </div>
-                        <div className="col-lg-4 p-0">
-                          <div className="menu-banner menu-banner-2">
-                            <figure>
-                              <Image
-                                src="/assets/images/menu-banner-1.jpg"
-                                alt="Menu banner"
-                                className="product-promo"
-                                width={380}
-                                height={790}
-                              />
-                            </figure>
-                            <i>OFF</i>
-                            <div className="banner-content">
-                              <h4>
-                                <span className="">UP TO</span><br />
-                                <b className="">50%</b>
-                              </h4>
-                            </div>
-                            <Link href="/products" className="btn btn-sm btn-dark">SHOP NOW</Link>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-                </li>
+                {linksLoading ? (
+                  <li>
+                    <span style={{ padding: '0 15px' }}>Loading...</span>
+                  </li>
+                ) : headerLinks.length > 0 ? (
+                  headerLinks.map((link) => (
+                    <li
+                      key={link._id || link.id}
+                      className={isLinkActive(link.url) ? 'active' : ''}
+                    >
+                      {link.openInNewTab ? (
+                        <a href={link.url} target="_blank" rel="noopener noreferrer">
+                          {link.label}
+                        </a>
+                      ) : (
+                        <Link href={link.url}>{link.label}</Link>
+                      )}
+                    </li>
+                  ))
+                ) : null}
               </ul>
             </nav>
           </div>
@@ -144,7 +140,11 @@ export function Header() {
         </div>
       </div>
       {/* End .header-top */}
-      <MobileMenu isOpen={mobileMenuOpen} onClose={() => setMobileMenuOpen(false)} />
+      <MobileMenu 
+        isOpen={mobileMenuOpen} 
+        onClose={() => setMobileMenuOpen(false)}
+        headerLinks={headerLinks}
+      />
     </header>
   );
 }

@@ -1,8 +1,63 @@
 "use client";
 
+import { useState } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { authApi } from "@/lib/api/auth";
 
 export default function LoginPage() {
+  const router = useRouter();
+  const [loginLoading, setLoginLoading] = useState(false);
+  const [registerLoading, setRegisterLoading] = useState(false);
+  const [loginError, setLoginError] = useState("");
+  const [registerError, setRegisterError] = useState("");
+  const [registerSuccess, setRegisterSuccess] = useState(false);
+
+  const handleLogin = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    setLoginError("");
+    setLoginLoading(true);
+
+    const formData = new FormData(e.currentTarget);
+    const email = formData.get("login-email") as string;
+    const password = formData.get("login-password") as string;
+
+    try {
+      await authApi.login({ email, password });
+      router.push("/");
+      router.refresh();
+    } catch (error: any) {
+      setLoginError(error.message || "Login failed. Please try again.");
+    } finally {
+      setLoginLoading(false);
+    }
+  };
+
+  const handleRegister = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    setRegisterError("");
+    setRegisterSuccess(false);
+    setRegisterLoading(true);
+
+    const formData = new FormData(e.currentTarget);
+    const name = formData.get("register-name") as string;
+    const email = formData.get("register-email") as string;
+    const password = formData.get("register-password") as string;
+
+    try {
+      await authApi.register({ name, email, password });
+      setRegisterSuccess(true);
+      setTimeout(() => {
+        router.push("/");
+        router.refresh();
+      }, 1500);
+    } catch (error: any) {
+      setRegisterError(error.message || "Registration failed. Please try again.");
+    } finally {
+      setRegisterLoading(false);
+    }
+  };
+
   return (
     <main className="main">
       <div className="category-banner-container bg-gray">
@@ -29,7 +84,6 @@ export default function LoginPage() {
                     Login or Register
                   </h4>
                   <h5 className="mb-2 coupon-sale-text d-block ls-10 p-0">
-                    {/* <i className="ls-0">Manage your</i> */}
                     <b className="text-dark"> products</b>
                   </h5>
                 </div>
@@ -62,7 +116,13 @@ export default function LoginPage() {
                   <h2 className="title">Login</h2>
                 </div>
 
-                <form action="#" onSubmit={(e) => e.preventDefault()}>
+                {loginError && (
+                  <div className="alert alert-danger" role="alert">
+                    {loginError}
+                  </div>
+                )}
+
+                <form onSubmit={handleLogin}>
                   <label htmlFor="login-email">
                     Username or email address
                     <span className="required">*</span>
@@ -71,7 +131,9 @@ export default function LoginPage() {
                     type="email"
                     className="form-input form-wide"
                     id="login-email"
+                    name="login-email"
                     required
+                    disabled={loginLoading}
                   />
 
                   <label htmlFor="login-password">
@@ -82,7 +144,9 @@ export default function LoginPage() {
                     type="password"
                     className="form-input form-wide"
                     id="login-password"
+                    name="login-password"
                     required
+                    disabled={loginLoading}
                   />
 
                   <div className="form-footer">
@@ -107,8 +171,12 @@ export default function LoginPage() {
                       Forgot Password?
                     </Link>
                   </div>
-                  <button type="submit" className="btn btn-dark btn-md w-100">
-                    LOGIN
+                  <button
+                    type="submit"
+                    className="btn btn-dark btn-md w-100"
+                    disabled={loginLoading}
+                  >
+                    {loginLoading ? "LOGGING IN..." : "LOGIN"}
                   </button>
                 </form>
               </div>
@@ -117,7 +185,32 @@ export default function LoginPage() {
                   <h2 className="title">Register</h2>
                 </div>
 
-                <form action="#" onSubmit={(e) => e.preventDefault()}>
+                {registerError && (
+                  <div className="alert alert-danger" role="alert">
+                    {registerError}
+                  </div>
+                )}
+
+                {registerSuccess && (
+                  <div className="alert alert-success" role="alert">
+                    Registration successful! Redirecting...
+                  </div>
+                )}
+
+                <form onSubmit={handleRegister}>
+                  <label htmlFor="register-name">
+                    Name
+                    <span className="required">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    className="form-input form-wide"
+                    id="register-name"
+                    name="register-name"
+                    required
+                    disabled={registerLoading}
+                  />
+
                   <label htmlFor="register-email">
                     Email address
                     <span className="required">*</span>
@@ -126,7 +219,9 @@ export default function LoginPage() {
                     type="email"
                     className="form-input form-wide"
                     id="register-email"
+                    name="register-email"
                     required
+                    disabled={registerLoading}
                   />
 
                   <label htmlFor="register-password">
@@ -137,15 +232,19 @@ export default function LoginPage() {
                     type="password"
                     className="form-input form-wide"
                     id="register-password"
+                    name="register-password"
                     required
+                    minLength={6}
+                    disabled={registerLoading}
                   />
 
                   <div className="form-footer mb-2">
                     <button
                       type="submit"
                       className="btn btn-dark btn-md w-100 mr-0"
+                      disabled={registerLoading}
                     >
-                      Register
+                      {registerLoading ? "REGISTERING..." : "Register"}
                     </button>
                   </div>
                 </form>

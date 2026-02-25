@@ -52,3 +52,41 @@ export const serverApi = {
   },
 };
 
+// Server-side API client with authentication (for use in Server Components)
+async function fetchAPIWithAuth(endpoint: string, options: RequestInit = {}) {
+  const { cookies } = await import('next/headers');
+  const token = (await cookies()).get('adminToken')?.value;
+  
+  if (!token) {
+    throw new Error('Unauthorized: No admin token found');
+  }
+
+  const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
+  const url = `${API_URL}${endpoint}`;
+  
+  const response = await fetch(url, {
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`,
+      ...options.headers,
+    },
+    cache: 'no-store', // Always fetch fresh data on server
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({ message: response.statusText }));
+    throw new Error(`API Error: ${errorData.message || response.statusText}`);
+  }
+
+  return response.json();
+}
+
+export const serverApiWithAuth = {
+  headerLinks: {
+    getAll: async () => {
+      const response = await fetchAPIWithAuth('/header-links/all');
+      return response.links || [];
+    },
+  },
+};

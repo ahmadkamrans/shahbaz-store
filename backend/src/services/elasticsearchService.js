@@ -218,10 +218,18 @@ export const searchProducts = async (searchParams) => {
 
     // Search query
     if (search && search.trim()) {
+      // Search in product fields and category name
+      // Category name is indexed in the product document, so we can search it directly
       mustQueries.push({
         multi_match: {
           query: search.trim(),
-          fields: ['name^3', 'description^2', 'shortDescription^2', 'tags^2'],
+          fields: [
+            'name^3',                    // Product name (highest weight)
+            'description^2',             // Product description
+            'shortDescription^2',        // Short description
+            'category.name^2',           // Category name (weighted)
+            'tags^2'                     // Tags
+          ],
           type: 'best_fields',
           fuzziness: 'AUTO',
           operator: 'or'

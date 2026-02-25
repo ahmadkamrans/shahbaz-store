@@ -1,8 +1,10 @@
 'use client';
 
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useCart } from '@/lib/store/cart-store';
+import { formatCurrency } from '@/lib/utils/currency';
 
 interface CartProps {
   isOpen: boolean;
@@ -10,7 +12,14 @@ interface CartProps {
 }
 
 export function Cart({ isOpen, onToggle }: CartProps) {
-  const { items, total } = useCart();
+  const { items, total, removeItem, initializeCart } = useCart();
+  const [isMounted, setIsMounted] = useState(false);
+
+  // Initialize cart from localStorage on mount
+  useEffect(() => {
+    initializeCart();
+    setIsMounted(true);
+  }, [initializeCart]);
 
   return (
     <div className="dropdown cart-dropdown">
@@ -25,7 +34,7 @@ export function Cart({ isOpen, onToggle }: CartProps) {
         }}
       >
         <i className="minicart-icon"></i>
-        <span className="cart-count badge-circle">{items.length}</span>
+        {isMounted && <span className="cart-count badge-circle">{items.length}</span>}
       </a>
 
       {isOpen && <div className="cart-overlay" onClick={onToggle}></div>}
@@ -58,8 +67,17 @@ export function Cart({ isOpen, onToggle }: CartProps) {
                       <h4 className="product-title">
                         <Link href={`/product/${item.product.id}`}>{item.product.name}</Link>
                       </h4>
+                      {item.variant && item.variant.attributes && (
+                        <div className="product-variant-info" style={{ fontSize: '0.85em', marginTop: '4px' }}>
+                          {Object.entries(item.variant.attributes).map(([key, value]) => (
+                            <span key={key} style={{ marginRight: '4px', color: '#666' }}>
+                              {key}: {value as string}
+                            </span>
+                          ))}
+                        </div>
+                      )}
                       <span className="cart-product-info">
-                        <span className="cart-product-qty">{item.quantity}</span> × ${item.price.toFixed(2)}
+                        <span className="cart-product-qty">{item.quantity}</span> × {formatCurrency(item.price)}
                       </span>
                     </div>
                     {/* End .product-details */}
@@ -79,7 +97,7 @@ export function Cart({ isOpen, onToggle }: CartProps) {
                         title="Remove Product"
                         onClick={(e) => {
                           e.preventDefault();
-                          // Handle remove
+                          removeItem(item.id);
                         }}
                       >
                         <span>×</span>
@@ -95,7 +113,7 @@ export function Cart({ isOpen, onToggle }: CartProps) {
               <>
                 <div className="dropdown-cart-total">
                   <span>SUBTOTAL:</span>
-                  <span className="cart-total-price float-right">${total.toFixed(2)}</span>
+                  <span className="cart-total-price float-right">{formatCurrency(total)}</span>
                 </div>
                 {/* End .dropdown-cart-total */}
 

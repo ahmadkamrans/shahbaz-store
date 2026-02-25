@@ -18,15 +18,21 @@ export default function ReviewsClient({ initialReviews }: ReviewsClientProps) {
     setReviews(initialReviews);
   }, [initialReviews]);
 
-  const refreshReviews = () => {
-    router.refresh();
+  const refreshReviews = async () => {
+    try {
+      const reviewsData = await reviewsApi.getAll();
+      setReviews(reviewsData.reviews || []);
+    } catch (error) {
+      console.error('Error refreshing reviews:', error);
+    }
   };
 
   const handleApprove = async (id: string) => {
     setApprovingId(id);
     try {
       await reviewsApi.approve(id);
-      setReviews((prev) => prev.map((r) => (r.id === id ? { ...r, status: "approved" as const } : r)));
+      // Refresh reviews to get updated data
+      await refreshReviews();
       toast.success("Review approved!");
       refreshReviews();
     } catch (err) {

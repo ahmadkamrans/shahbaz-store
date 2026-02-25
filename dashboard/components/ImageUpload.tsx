@@ -20,13 +20,31 @@ export default function ImageUpload({
   onMultipleUpload,
 }: ImageUploadProps) {
   const [uploading, setUploading] = useState(false);
-  const [preview, setPreview] = useState<string | null>(currentImage || null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Format image URL for display
+  const formatImageUrl = (imgPath: string | undefined): string => {
+    if (!imgPath) return '';
+    // If already a full URL, return as is
+    if (imgPath.startsWith('http://') || imgPath.startsWith('https://')) {
+      return imgPath;
+    }
+    // If it's a path, format it
+    const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
+    const BACKEND_BASE_URL = API_BASE_URL.replace('/api', '');
+    return imgPath.startsWith('/') 
+      ? `${BACKEND_BASE_URL}${imgPath}`
+      : `${BACKEND_BASE_URL}/${imgPath}`;
+  };
+
+  const [preview, setPreview] = useState<string | null>(
+    currentImage ? formatImageUrl(currentImage) : null
+  );
 
   // Update preview when currentImage prop changes (only for single image upload)
   useEffect(() => {
     if (!multiple) {
-      setPreview(currentImage || null);
+      setPreview(currentImage ? formatImageUrl(currentImage) : null);
     }
   }, [currentImage, multiple]);
 
@@ -41,7 +59,8 @@ export default function ImageUpload({
         // For multiple uploads, don't set preview (just upload)
         const fileArray = Array.from(files);
         const response = await uploadApi.uploadMultipleImages(fileArray);
-        onMultipleUpload(response.images.map((img) => img.url));
+        // Use publicId (the path) for storage, not full URL
+        onMultipleUpload(response.images.map((img) => img.publicId || img.url));
         toast.success(`${response.images.length} image(s) uploaded successfully!`);
       } else {
         // Single image upload - show preview
@@ -54,10 +73,11 @@ export default function ImageUpload({
         };
         reader.readAsDataURL(file);
 
-        // Upload to Cloudinary
+        // Upload to backend
         const response = await uploadApi.uploadImage(file);
-        onUpload(response.url);
-        setPreview(response.url); // Update preview with Cloudinary URL
+        // Use publicId (the path) for storage, but full URL for preview
+        onUpload(response.publicId || response.url);
+        setPreview(response.url); // Update preview with full URL for display
         toast.success("Image uploaded successfully!");
       }
     } catch (error: any) {
