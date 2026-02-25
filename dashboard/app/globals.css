@@ -20,7 +20,8 @@
 :root {
   --background: #ffffff;
   --foreground: #171717;
-  --custom-blue: #075985;
+  --primary: #901781;
+  --custom-blue: #901781;
 }
 
 body {

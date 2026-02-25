@@ -51,7 +51,7 @@ export default function Sidebar() {
                 key={item.name}
                 href={item.href}
                 className={`flex items-center px-3 py-2.5 rounded-lg transition-colors ${
-                  isActive ? "bg-custom-red text-white" : "hover:bg-white/10"
+                  isActive ? "bg-custom-blue text-white" : "hover:bg-white/10"
                 }`}
               >
                 <item.icon className="w-5 h-5" />
