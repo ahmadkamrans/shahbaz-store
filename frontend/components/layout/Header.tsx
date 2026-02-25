@@ -1,14 +1,14 @@
-'use client';
+"use client";
 
-import { useState, useEffect } from 'react';
-import { usePathname } from 'next/navigation';
-import Link from 'next/link';
-import Image from 'next/image';
-import { Cart } from '../common/Cart';
-import { Search } from '../common/Search';
-import { MobileMenu } from './MobileMenu';
-import { useCart } from '@/lib/store/cart-store';
-import { headerLinksApi, HeaderLink } from '@/lib/api/headerLinks';
+import { useState, useEffect } from "react";
+import { usePathname } from "next/navigation";
+import Link from "next/link";
+import Image from "next/image";
+import { Cart } from "../common/Cart";
+import { Search } from "../common/Search";
+import { MobileMenu } from "./MobileMenu";
+import { useCart } from "@/lib/store/cart-store";
+import { headerLinksApi, HeaderLink } from "@/lib/api/headerLinks";
 
 export function Header() {
   const pathname = usePathname();
@@ -27,7 +27,7 @@ export function Header() {
         const links = await headerLinksApi.getAll();
         setHeaderLinks(links);
       } catch (error) {
-        console.error('Error fetching header links:', error);
+        console.error("Error fetching header links:", error);
         // Fallback to empty array on error
         setHeaderLinks([]);
       } finally {
@@ -40,8 +40,8 @@ export function Header() {
 
   // Determine active page based on pathname
   const isLinkActive = (url: string) => {
-    if (url === '/') {
-      return pathname === '/';
+    if (url === "/") {
+      return pathname === "/";
     }
     return pathname?.startsWith(url);
   };
@@ -53,13 +53,13 @@ export function Header() {
 
   // Sync body class so theme CSS shows cart as right sidebar/canvas with overlay
   useEffect(() => {
-    if (typeof document === 'undefined') return;
+    if (typeof document === "undefined") return;
     if (cartOpen) {
-      document.body.classList.add('cart-opened');
+      document.body.classList.add("cart-opened");
     } else {
-      document.body.classList.remove('cart-opened');
+      document.body.classList.remove("cart-opened");
     }
-    return () => document.body.classList.remove('cart-opened');
+    return () => document.body.classList.remove("cart-opened");
   }, [cartOpen]);
 
   return (
@@ -71,16 +71,20 @@ export function Header() {
               <ul className="menu">
                 {linksLoading ? (
                   <li>
-                    <span style={{ padding: '0 15px' }}>Loading...</span>
+                    <span style={{ padding: "0 15px" }}>Loading...</span>
                   </li>
                 ) : headerLinks.length > 0 ? (
                   headerLinks.map((link) => (
                     <li
                       key={link._id || link.id}
-                      className={isLinkActive(link.url) ? 'active' : ''}
+                      className={isLinkActive(link.url) ? "active" : ""}
                     >
                       {link.openInNewTab ? (
-                        <a href={link.url} target="_blank" rel="noopener noreferrer">
+                        <a
+                          href={link.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                        >
                           {link.label}
                         </a>
                       ) : (
@@ -105,7 +109,7 @@ export function Header() {
 
           <Link href="/" className="logo header-logo-center">
             <Image
-              src="/assets/images/logo-black.png"
+              src="/assets/images/logo.jpeg"
               width={180}
               height={72}
               alt="Shahbaz"
@@ -117,9 +121,16 @@ export function Header() {
               <i className="icon-user-2"></i>
             </Link>
 
-            <Search isOpen={searchOpen} onToggle={() => setSearchOpen(!searchOpen)} />
+            <Search
+              isOpen={searchOpen}
+              onToggle={() => setSearchOpen(!searchOpen)}
+            />
 
-            <Link href="/wishlist" className="header-icon header-icon-wishlist" title="Wishlist">
+            <Link
+              href="/wishlist"
+              className="header-icon header-icon-wishlist"
+              title="Wishlist"
+            >
               <i className="icon-wishlist-2"></i>
             </Link>
 
@@ -134,18 +145,17 @@ export function Header() {
       <div className="container">
         <div className="header-bottom w-100">
           <h4 className="mb-0 text-center pr-3 pl-3">
-            Get 10% OFF at the Shahbaz Kitchen Selection -{' '}
+            Get 10% OFF at the Shahbaz Kitchen Selection -{" "}
             <Link href="/products">Shop Now!</Link>
           </h4>
         </div>
       </div>
       {/* End .header-top */}
-      <MobileMenu 
-        isOpen={mobileMenuOpen} 
+      <MobileMenu
+        isOpen={mobileMenuOpen}
         onClose={() => setMobileMenuOpen(false)}
         headerLinks={headerLinks}
       />
     </header>
   );
 }
-

@@ -789,7 +789,7 @@
   margin: 0;
   text-align: center;
   -webkit-tap-highlight-color: transparent;
-  color: #222529;
+  color: #901781;
   font-size: 3rem;
 }
 
@@ -797,7 +797,7 @@
   position: absolute;
   top: 50%;
   transform: translateY(-50%);
-  color: #222529;
+  color: #901781;
   margin: 0;
   font-size: 3rem;
   padding: 4px 7px;
@@ -814,7 +814,7 @@
 
 .owl-theme .owl-nav [class*=owl-]:not(.disabled):hover {
   background: transparent;
-  color: #222529;
+  color: #901781;
   text-decoration: none;
 }
 
@@ -2420,8 +2420,8 @@ a.btn.disabled {
 }
 
 .btn-dark {
-  border-color: #222529;
-  background-color: #222529;
+  border-color: #901781;
+  background-color: #901781;
   color: #fff;
   box-shadow: none;
 }
@@ -2437,8 +2437,8 @@ a.btn.disabled {
 
 .btn-dark.disabled,
 .btn-dark:disabled {
-  border-color: #222529;
-  background-color: #222529;
+  border-color: #901781;
+  background-color: #901781;
   color: #fff;
 }
 
@@ -2453,7 +2453,7 @@ a.btn.disabled {
 .btn-gray {
   border-color: #f4f4f4;
   background-color: #f4f4f4;
-  color: #222529;
+  color: #901781;
   box-shadow: none;
 }
 
@@ -2470,7 +2470,7 @@ a.btn.disabled {
 .btn-gray:disabled {
   border-color: #f4f4f4;
   background-color: #f4f4f4;
-  color: #222529;
+  color: #901781;
 }
 
 .btn-gray:not(:disabled):not(.disabled):active,
@@ -2478,7 +2478,7 @@ a.btn.disabled {
 .show>.btn-gray.dropdown-toggle {
   border-color: #d4d4d4;
   background-color: #dbdbdb;
-  color: #222529;
+  color: #901781;
 }
 
 .btn-link {
@@ -2684,7 +2684,7 @@ a:focus {
 
 .count-wrapper {
   margin-bottom: 0.9rem;
-  color: #222529;
+  color: #901781;
   font: 400 2.8rem/1 Poppins, sans-serif;
   text-transform: uppercase;
 }
@@ -4789,7 +4789,7 @@ textarea.form-control {
 
 label {
   margin: 0 0 0.6rem;
-  color: #222529;
+  color: #901781;
   font-family: Poppins, sans-serif;
   font-size: 1.2rem;
   font-weight: 700;
@@ -4943,7 +4943,7 @@ label {
 
 .custom-checkbox .custom-control-input:checked~.custom-control-label:after {
   background: none;
-  color: #222529;
+  color: #901781;
   content: "";
   font-family: "porto";
 }
@@ -5020,7 +5020,7 @@ label {
   display: flex;
   align-items: center;
   width: 100%;
-  color: #222529;
+  color: #901781;
   padding: 2.5rem 2.4rem 2rem;
 }
 
@@ -5164,7 +5164,7 @@ label {
 
 .page-header {
   padding: 5.5rem 0;
-  color: #222529;
+  color: #901781;
   background-color: #f4f4f4;
   text-align: center;
 }
@@ -5196,7 +5196,7 @@ label {
   font-size: 2.8rem;
   font-weight: 700;
   letter-spacing: -0.05em;
-  color: #222529;
+  color: #901781;
 }
 
 @media (min-width: 768px) {
@@ -5224,7 +5224,7 @@ label {
 .toolbox .select-custom:after {
   right: 1.5rem;
   font-size: 1.6rem;
-  color: #222529;
+  color: #901781;
 }
 
 .toolbox .select-custom .form-control {
@@ -5390,7 +5390,7 @@ span.page-link,
   .toolbox label {
     font-size: 11px;
     font-weight: 600;
-    color: #222529;
+    color: #901781;
   }
 
   .toolbox .select-custom .form-control {
@@ -5398,7 +5398,7 @@ span.page-link,
     font-weight: 600;
     max-width: 140px;
     text-transform: uppercase;
-    color: #222529;
+    color: #901781;
   }
 }
 
@@ -5476,7 +5476,7 @@ span.page-link,
 }
 
 .minipopup-box .product-detail .product-name {
-  color: #222529;
+  color: #901781;
   font-size: 12px;
   font-weight: 700;
 }
@@ -5594,7 +5594,7 @@ span.page-link,
 }
 
 .login-popup .forget-password {
-  color: #222529;
+  color: #901781;
   font-size: 1.4rem;
   font-family: "Open Sans", sans-serif;
   font-weight: 600;
@@ -6275,7 +6275,7 @@ figure .porto-loading-icon {
 }
 
 .product-price {
-  color: #222529;
+  color: #901781;
   font-size: 1.8rem;
   line-height: 1;
 }
@@ -6431,7 +6431,7 @@ figure .porto-loading-icon {
   border: 0.2rem solid #fff;
   margin-right: 0.6rem;
   transition: box-shadow 0.35s ease;
-  box-shadow: 0 0 0 0.1rem #222529;
+  box-shadow: 0 0 0 0.1rem #901781;
 }
 
 .product-single-qty {
@@ -6450,7 +6450,7 @@ figure .porto-loading-icon {
   width: 2.7em;
   height: 36px;
   padding: 10px 2px;
-  color: #222529;
+  color: #901781;
   font-size: 1.4rem;
   font-family: Poppins, sans-serif;
   text-align: center;
@@ -6488,7 +6488,7 @@ figure .porto-loading-icon {
   width: 9px;
   height: 1px;
   margin-left: -0.55rem;
-  background: #222529;
+  background: #901781;
   content: "";
 }
 
@@ -9116,7 +9116,7 @@ h5,
 h6,
 .h6 {
   margin-bottom: 1.8rem;
-  color: #222529;
+  color: #901781;
   font-weight: 700;
   line-height: 1.1;
   font-family: Poppins, sans-serif;
@@ -9174,7 +9174,7 @@ a:focus {
 
 .heading {
   margin-bottom: 3rem;
-  color: #222529;
+  color: #901781;
 }
 
 .heading .title {
@@ -9237,7 +9237,7 @@ a:focus {
 }
 
 .bg-dark {
-  background-color: #222529 !important;
+  background-color: #901781 !important;
 }
 
 .bg-dark2 {
@@ -9253,7 +9253,7 @@ a:focus {
 }
 
 .text-dark {
-  color: #222529 !important;
+  color: #901781 !important;
 }
 
 .text-primary {
@@ -9661,7 +9661,7 @@ a:focus {
 }
 
 .owl-carousel.dots-simple .owl-dots .owl-dot.active span::before {
-  background-color: #222529;
+  background-color: #901781;
 }
 
 .owl-carousel.dots-simple .owl-dots .owl-dot span {
@@ -9883,7 +9883,7 @@ img.slide-bg {
   flex-direction: column;
   justify-content: center;
   align-items: center;
-  color: #222529;
+  color: #901781;
   font-family: Poppins, sans-serif;
   font-size: 9px;
   font-weight: 600;
@@ -9942,7 +9942,7 @@ header a {
 }
 
 .header-middle {
-  color: #222529;
+  color: #901781;
 }
 
 .header-left,
@@ -9968,7 +9968,7 @@ header a {
 
 .header-bottom .header-right {
   padding-right: 2.6rem;
-  color: #222529;
+  color: #901781;
 }
 
 .header-bottom.fixed .header-center {
@@ -10050,7 +10050,7 @@ header a {
 .mobile-menu-toggler {
   border: 0;
   background: transparent;
-  color: #222529;
+  color: #901781;
   padding: 1rem 0.5rem;
   margin-right: 0.5rem;
   font-size: 20px;
@@ -10148,7 +10148,7 @@ header .separator {
 }
 
 .header-icon:hover {
-  color: #222529;
+  color: #901781;
 }
 
 .minicart-icon {
@@ -10156,7 +10156,7 @@ header .separator {
   vertical-align: middle;
   width: 25px;
   height: 20px;
-  border: 2px solid #222529;
+  border: 2px solid #901781;
   border-radius: 0 0 5px 5px;
   position: relative;
   opacity: 0.9;
@@ -10435,12 +10435,12 @@ header .separator {
   margin-bottom: 1.1rem;
   font-size: 1.4rem;
   line-height: 19px;
-  color: #222529;
+  color: #901781;
   font-weight: 500;
 }
 
 .cart-dropdown .product-title a {
-  color: #222529;
+  color: #901781;
 }
 
 .cart-dropdown .product-details {
@@ -10531,13 +10531,13 @@ header .separator {
 .dropdown-cart-action .view-cart {
   margin: 1rem 0;
   background: #e7e7e7;
-  color: #222529;
+  color: #901781;
 }
 
 .dropdown-cart-action .view-cart:hover,
 .dropdown-cart-action .view-cart:focus {
   background: #f1f1f1;
-  color: #222529;
+  color: #901781;
 }
 
 .compare-dropdown .dropdown-toggle {
@@ -10833,7 +10833,7 @@ header .separator {
   border: 0;
   border-left: 1px solid #fff;
   min-width: 40px;
-  color: #222529;
+  color: #901781;
   font-size: 16px;
   background: #f4f4f4;
 }
@@ -12200,7 +12200,7 @@ footer .contact-info-label {
   height: 30px;
   align-items: center;
   justify-content: center;
-  background-color: #222529;
+  background-color: #901781;
   border-radius: 50%;
   bottom: 5px;
   right: 5px;
@@ -12294,7 +12294,7 @@ footer .contact-info-label {
   height: 2px;
   margin-top: -1px;
   transition: all 0.35s;
-  background: #222529;
+  background: #901781;
   content: "";
 }
 
@@ -12349,7 +12349,7 @@ footer .contact-info-label {
 .widget .owl-carousel .owl-nav button.owl-prev {
   padding: 0 0.4rem !important;
   border-radius: 0;
-  color: #222529;
+  color: #901781;
   font-size: 1.8rem;
   line-height: 1;
   background-color: transparent;
@@ -12412,7 +12412,7 @@ span.toggle {
   line-height: 23px;
   font-family: "Porto";
   font-weight: 900;
-  color: #222529;
+  color: #901781;
 }
 
 span.toggle::before {
@@ -12588,7 +12588,7 @@ span.toggle::before {
 
 .horizontal-filter:not(.filter-sorts).toolbox .form-control {
   padding: 0 0.8rem 2px;
-  color: #222529;
+  color: #901781;
   font-family: "poppins";
 }
 
@@ -12636,8 +12636,8 @@ span.toggle::before {
 }
 
 .horizontal-filter:not(.filter-sorts) .layout-btn.active {
-  color: #222529;
-  border-color: #222529;
+  color: #901781;
+  border-color: #901781;
 }
 
 .horizontal-filter:not(.filter-sorts) .layout-btn:not(:last-child) {
@@ -12824,7 +12824,7 @@ span.toggle::before {
 
 .boxed-slide-2 .slide-content {
   left: 6.8%;
-  color: #222529;
+  color: #901781;
 }
 
 .boxed-slide-1 h4 {
@@ -12848,7 +12848,7 @@ span.toggle::before {
   display: block;
   position: relative;
   width: 100%;
-  color: #222529;
+  color: #901781;
   letter-spacing: 0.05em;
   font-weight: 700;
   margin-bottom: -6px;
@@ -12882,7 +12882,7 @@ span.toggle::before {
 .boxed-slide-1 b {
   font-size: 3.6rem;
   font-weight: 800;
-  color: #222529;
+  color: #901781;
   letter-spacing: 0.025em;
 }
 
@@ -12893,7 +12893,7 @@ span.toggle::before {
 .boxed-slide-1 p {
   font-size: 13px;
   font-weight: 700;
-  color: #222529;
+  color: #901781;
   letter-spacing: 0.03em;
   margin-top: -5px;
   margin-bottom: 2.2rem;
@@ -13058,7 +13058,7 @@ span.toggle::before {
 }
 
 .sidebar-toggle svg {
-  stroke: #222529;
+  stroke: #901781;
   fill: #fff;
   width: 28px;
 }
@@ -13103,7 +13103,7 @@ span.toggle::before {
   .sidebar-toggle span {
     font-size: 11px;
     font-weight: 600;
-    color: #222529;
+    color: #901781;
   }
 
   .sidebar-shop .widget {
@@ -13205,14 +13205,14 @@ span.toggle::before {
 }
 
 .cart-message span {
-  color: #222529;
+  color: #901781;
   font-size: 1.6rem;
 }
 
 .single-cart-notice {
   line-height: 24px;
   font-size: 1.6rem;
-  color: #222529;
+  color: #901781;
 }
 
 .view-cart {
@@ -13243,7 +13243,7 @@ span.toggle::before {
   align-items: center;
   justify-content: center;
   padding: 17px 8px;
-  color: #222529;
+  color: #901781;
   font-size: 1.2rem;
   font-weight: 700;
   font-family: Poppins, sans-serif;
@@ -13344,7 +13344,7 @@ span.toggle::before {
 
 .product-single-details .product-title {
   margin-bottom: 1.1rem;
-  color: #222529;
+  color: #901781;
   font-size: 3rem;
   font-weight: 700;
   letter-spacing: -0.01em;
@@ -13363,7 +13363,7 @@ span.toggle::before {
 }
 
 .product-single-details .product-nav a {
-  color: #222529;
+  color: #901781;
 }
 
 .product-single-details .product-nav .product-prev,
@@ -13436,7 +13436,7 @@ span.toggle::before {
 }
 
 .product-single-details .product-nav .box-content {
-  border-top: 3px solid #222529;
+  border-top: 3px solid #901781;
   display: block;
   padding: 10px 10px 11px;
 }
@@ -13470,7 +13470,7 @@ span.toggle::before {
 
 .product-single-details .price-box {
   margin-bottom: 2.3rem;
-  color: #222529;
+  color: #901781;
   font-weight: 600;
   font-family: Poppins, sans-serif;
 }
@@ -13482,7 +13482,7 @@ span.toggle::before {
 }
 
 .product-single-details .new-price {
-  color: #222529;
+  color: #901781;
   font-size: 2.4rem;
   letter-spacing: -0.02em;
   vertical-align: middle;
@@ -13491,7 +13491,7 @@ span.toggle::before {
 }
 
 .product-single-details .product-price {
-  color: #222529;
+  color: #901781;
   font-size: 2.4rem;
   letter-spacing: -0.02em;
   vertical-align: middle;
@@ -13586,7 +13586,7 @@ span.toggle::before {
 }
 
 .product-single-details .product-desc a {
-  color: #222529;
+  color: #901781;
 }
 
 .product-single-details .product-action {
@@ -13643,7 +13643,7 @@ span.toggle::before {
 
 .product-filters-container .select-custom::after {
   right: 1.5rem;
-  color: #222529;
+  color: #901781;
 }
 
 .product-single-container .cart-sticky .sticky-header.fixed {
@@ -13757,7 +13757,7 @@ main .sticky-header .product-ratings:before {
 }
 
 .single-info-list li strong {
-  color: #222529;
+  color: #901781;
   letter-spacing: 0;
 }
 
@@ -13854,7 +13854,7 @@ main .sticky-header .product-ratings:before {
 }
 
 .product-single-qty label {
-  color: #222529;
+  color: #901781;
   font-weight: 600;
   font-size: 1.5rem;
 }
@@ -13870,7 +13870,7 @@ main .sticky-header .product-ratings:before {
 .product-single-share label {
   margin-right: 1.2rem;
   margin-bottom: 0.5rem;
-  color: #222529;
+  color: #901781;
   font-weight: 600;
   font-size: 1.4rem;
   line-height: 1.1;
@@ -13903,7 +13903,7 @@ main .sticky-header .product-ratings:before {
 }
 
 .product-single-share:not(.icon-with-color) .social-icon:not(:hover):not(:active):not(:focus) {
-  color: #222529;
+  color: #901781;
   background-color: transparent;
   border-color: #e7e7e7;
 }
@@ -14107,7 +14107,7 @@ main .sticky-header .product-ratings:before {
 }
 
 .product-single-tabs .nav.nav-tabs .nav-link.active {
-  color: #222529;
+  color: #901781;
 }
 
 .product-single-tabs .nav.nav-tabs .nav-link {
@@ -14117,7 +14117,7 @@ main .sticky-header .product-ratings:before {
 
 .product-single-tabs .nav.nav-tabs .nav-link:hover,
 .product-single-tabs .nav.nav-tabs .nav-link.active {
-  border-bottom-color: #222529;
+  border-bottom-color: #901781;
 }
 
 .product-single-tabs .nav-item {
@@ -14271,7 +14271,7 @@ main .sticky-header .product-ratings:before {
 }
 
 .product-reviews-content .required {
-  color: #222529;
+  color: #901781;
 }
 
 .product-reviews-content .reviews-title {
@@ -14584,7 +14584,7 @@ main .sticky-header .product-ratings:before {
   height: 28px;
   font-size: 13px;
   border: 1px solid #e9e9e9;
-  color: #222529;
+  color: #901781;
   background-color: #f4f4f4;
 }
 
@@ -15202,15 +15202,15 @@ main .sticky-header .product-ratings:before {
 }
 
 .product-single-info .social-icon:hover {
-  background-color: #222529;
+  background-color: #901781;
   opacity: 0.8;
 }
 
 .product-single-info .social-icon:not(:hover):not(:active):not(:focus) {
-  color: #222529;
-  background-color: #222529;
+  color: #901781;
+  background-color: #901781;
   color: #fff;
-  border-color: #222529;
+  border-color: #901781;
 }
 
 @media (max-width: 1200px) and (min-width: 768px) {
@@ -15584,7 +15584,7 @@ main .sticky-header .product-ratings:before {
   font-family: "porto";
   font-size: 1.7rem;
   font-weight: 600;
-  color: #222529;
+  color: #901781;
 }
 
 .sidebar-product .widget-title a.collapsed:after {
@@ -15688,7 +15688,7 @@ main .sticky-header .product-ratings:before {
 .sidebar-product .widget-body p {
   line-height: 27px;
   font-size: 1.3rem;
-  color: #222529;
+  color: #901781;
   letter-spacing: 0.01em;
   font-weight: 500;
   margin-bottom: 3rem;
@@ -16148,7 +16148,7 @@ aside .widget-info i {
   height: 28px;
   font-size: 13px;
   border: 1px solid #e9e9e9;
-  color: #222529;
+  color: #901781;
   background-color: #f4f4f4;
 }
 
@@ -16324,7 +16324,7 @@ aside .widget-info i {
 .cart-table-container .btn-sm {
   border: none;
   background-color: #f4f4f4;
-  color: #222529;
+  color: #901781;
 }
 
 .cart-table-container .btn-shop:hover,
@@ -16343,7 +16343,7 @@ aside .widget-info i {
 .table.table-cart tr th,
 .table.table-wishlist tr th {
   border: 0;
-  color: #222529;
+  color: #901781;
   font-weight: 700;
   line-height: 2.4rem;
   text-transform: uppercase;
@@ -16401,7 +16401,7 @@ aside .widget-info i {
 
 .table.table-cart .subtotal-price,
 .table.table-wishlist .subtotal-price {
-  color: #222529;
+  color: #901781;
   font-size: 1.6rem;
   font-weight: 600;
 }
@@ -16595,7 +16595,7 @@ tbody .product-col {
   letter-spacing: -0.01em;
   font-size: 14px;
   font-weight: 600;
-  color: #222529;
+  color: #901781;
   font-family: "poppins";
 }
 
@@ -16612,7 +16612,7 @@ tbody .product-col {
 
 .table.table-totals tfoot {
   border-top: 1px solid #ccc;
-  color: #222529;
+  color: #901781;
   font-size: 1.6rem;
   font-weight: 700;
 }
@@ -16628,7 +16628,7 @@ tbody .product-col {
 .table.table-totals tfoot tr td:last-child {
   font-weight: 700;
   font-size: 22px;
-  color: #222529;
+  color: #901781;
 }
 
 .table.table-totals tfoot b {
@@ -16679,7 +16679,7 @@ tbody .product-col {
 
 .cart-summary .btn-update-total {
   background-color: #f4f4f4;
-  color: #222529;
+  color: #901781;
   border: none;
   padding: 8px 12px;
   line-height: 1.5;
@@ -16832,7 +16832,7 @@ tbody .product-col {
 }
 
 .checkout-progress-bar li.prev {
-  color: #222529;
+  color: #901781;
 }
 
 .checkout-progress-bar li a {
@@ -16906,7 +16906,7 @@ tbody .product-col {
 
 .step-title {
   margin-bottom: 0;
-  color: #222529;
+  color: #901781;
   font-size: 2.2rem;
 }
 
@@ -17009,7 +17009,7 @@ tbody .product-col {
 .table-mini-cart thead th {
   border: 0;
   vertical-align: middle;
-  color: #222529;
+  color: #901781;
 }
 
 .table-mini-cart th,
@@ -17105,7 +17105,7 @@ tbody .product-col {
 }
 
 .table-mini-cart .order-total .total-price {
-  color: #222529;
+  color: #901781;
   font-size: 2.2rem;
 }
 
@@ -17233,7 +17233,7 @@ tbody .product-col {
 .login-form-container .btn-toggle,
 .checkout-discount .btn-toggle {
   padding: 0;
-  color: #222529;
+  color: #901781;
   letter-spacing: -0.025em;
 }
 
@@ -17539,7 +17539,7 @@ tbody .product-col {
   width: 4.5rem;
   padding: 1rem 0.8rem 0.8rem;
   color: #fff;
-  background: #222529;
+  background: #901781;
   font-family: Poppins, sans-serif;
   text-align: center;
   text-transform: uppercase;
@@ -17614,7 +17614,7 @@ tbody .product-col {
 
 .post-title {
   margin-bottom: 1.3rem;
-  color: #222529;
+  color: #901781;
   font-family: "Open Sans", sans-serif;
   font-size: 1.8rem;
   font-weight: 700;
@@ -17882,7 +17882,7 @@ tbody .product-col {
   font-size: 1.4rem;
   line-height: 1.75;
   font-weight: 700;
-  color: #222529;
+  color: #901781;
 }
 
 .comment-respond .form-group-custom-control {
@@ -17962,7 +17962,7 @@ tbody .product-col {
 
 .related-posts .read-more {
   float: left;
-  color: #222529;
+  color: #901781;
   font-size: 12.6px;
   font-weight: 600;
 }
@@ -18076,7 +18076,7 @@ tbody .product-col {
   text-transform: uppercase;
   font-weight: 700;
   border-radius: 10px;
-  background-color: #222529;
+  background-color: #901781;
   color: #fff;
 }
 
@@ -18433,7 +18433,7 @@ tbody .product-col {
 .nav-tabs.list .nav-item .nav-link.address,
 .nav-tabs.list .nav-item .nav-link.active {
   font-weight: 700;
-  color: #222529;
+  color: #901781;
 }
 
 @media (max-width: 575px) {
@@ -18598,7 +18598,7 @@ tbody .product-col {
 .download-table-container .btn {
   padding: 9px 24px 8px;
   background-color: #f4f4f4;
-  color: #222529;
+  color: #901781;
   border: none;
   font-weight: 700;
   font-family: "Open Sans", sans-serif;
@@ -18797,7 +18797,7 @@ tbody .product-col {
 .wishlist-table-container .btn-quickview {
   margin-right: 6px;
   background: #f4f4f4;
-  color: #222529;
+  color: #901781;
   font-family: "Open Sans", sans-serif;
 }
 
@@ -18847,7 +18847,7 @@ tbody .product-col {
 }
 
 .table.table-wishlist .stock-status {
-  color: #222529;
+  color: #901781;
   font-weight: 600;
 }
 

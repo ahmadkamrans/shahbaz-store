@@ -295,35 +295,7 @@ export default function HomePage() {
         </section>
       </div>
 
-      <section
-        className="banner-section home-banner mb-6 appear-animate"
-        style={{
-          backgroundImage:
-            "url('/assets/images/demoes/demo29/banners/banner-bathroom.jpg')",
-          backgroundSize: "cover",
-          backgroundPosition: "center",
-        }}
-      >
-        <div className="banner-content full-content d-flex flex-lg-row flex-column align-items-center mt-1 mt-lg-0">
-          <div className="left-content">
-            <div>
-              <span className="font1">it is time for a</span>
-              <h4>Modern Bathroom</h4>
-            </div>
-            <Link href="/products" className="btn">
-              Show Now <i className="fas fa-long-arrow-alt-right"></i>
-            </Link>
-          </div>
-          <div className="right-content banner-info">
-            <a href="#" className="btn skew-box bg-white">
-              Exclusive COUPON
-            </a>
-            <h3 className="sale-off skew-box">
-              <span className="text-white">Rs 200</span>off
-            </h3>
-          </div>
-        </div>
-      </section>
+
 
       <section>
         <div className="container">
@@ -421,102 +393,7 @@ export default function HomePage() {
 
           <hr />
 
-          <div className="blog-section container mb-4 appear-animate">
-            <div className="row">
-              <div className="col-xl-6 mb-3 mb-xl-0">
-                <div className="section-title d-flex align-items-center mt-1 mb-1">
-                  <h2 className="mb-0">RECENT ARTICLE</h2>
-                  <hr className="vertical d-none d-sm-block" />
-                  <Link
-                    href="/blog"
-                    className="with-icon mr-sm-auto ml-4 mr-4 ml-sm-0"
-                  >
-                    VIEW BLOG<i className="fas fa-long-arrow-alt-right"></i>
-                  </Link>
-                </div>
-
-                <div className="row post">
-                  <div className="col-md-6">
-                    <div className="post-media">
-                      <Link href="/blog/1">
-                        <Image
-                          src="/assets/images/demoes/demo29/banners/banner-article.jpg"
-                          width={396}
-                          height={297}
-                          alt="Post"
-                        />
-                      </Link>
-                      <div className="post-date">
-                        <span className="day ls-0">24</span>
-                        <span className="month">JUL-19</span>
-                      </div>
-                    </div>
-                  </div>
-                  <div className="col-md-6 d-flex align-items-center">
-                    <div className="post-body">
-                      <a href="#" className="post-category">
-                        DESIGN TRENDS
-                      </a>
-                      <h3 className="post-title">
-                        Top quality flooring and parquets
-                      </h3>
-                      <p className="mb-2">
-                        Lorem ipsum dolor sit amet, consectetur adipiscing elit.
-                        Cras non placerat mi. Etiam non tellus sem. Aenean
-                        pretium convallis lorem, sit amet dapibus...
-                      </p>
-                      <Link href="/blog/1" className="btn with-icon">
-                        READ MORE
-                      </Link>
-                    </div>
-                  </div>
-                </div>
-              </div>
-              <div className="col-xl-6">
-                <div className="section-title d-flex align-items-center mt-1 mb-1">
-                  <h2 className="mb-0">FROM INSTAGRAM</h2>
-                  <hr className="vertical d-none d-sm-block" />
-                  <a
-                    href="https://instagram.com/shahbaz"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="with-icon mr-sm-auto ml-4 mr-4 ml-sm-0"
-                  >
-                    @SHAHBAZ<i className="fas fa-long-arrow-alt-right"></i>
-                  </a>
-                </div>
-                <div className="row row-sm">
-                  <div className="col-sm-4 mt-2 mb-2">
-                    <Image
-                      className="w-100"
-                      src="/assets/images/demoes/demo29/instagram/instagram1.jpg"
-                      width={263}
-                      height={263}
-                      alt="Instagram"
-                    />
-                  </div>
-                  <div className="col-sm-4 mt-2 mb-2">
-                    <Image
-                      className="w-100"
-                      src="/assets/images/demoes/demo29/instagram/instagram2.jpg"
-                      width={263}
-                      height={263}
-                      alt="Instagram"
-                    />
-                  </div>
-                  <div className="col-sm-4 mt-2 mb-2">
-                    <Image
-                      className="w-100"
-                      src="/assets/images/demoes/demo29/instagram/instagram3.jpg"
-                      width={263}
-                      height={263}
-                      alt="Instagram"
-                    />
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
+     
         </div>
       </section>
 

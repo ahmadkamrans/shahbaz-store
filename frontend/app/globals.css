@@ -24,7 +24,7 @@
   width: auto;
   max-width: 197px;
   height: auto;
-  max-height: 109px;  
+  max-height: 109px;
 }
 
 /* Footer: larger logo (theme sets .logo-footer img max-width: 115px) */
@@ -282,7 +282,7 @@ body {
   left: auto;
   right: 1.5rem;
   top: 1rem;
-  color: #222529;
+  color: #901781;
   font-size: 2.4rem;
   opacity: 0.8;
 }
@@ -327,4 +327,81 @@ body {
 .checkout-steps .shipping-info {
   margin-top: 0;
   padding-top: 0;
+}
+
+/* Force all outline buttons to solid primary (#901781) - no outline style */
+.btn-outline,
+.btn-outline-primary,
+.btn-outline-secondary,
+.btn-outline-dark,
+.btn-outline-light,
+.btn-outline-warning,
+.btn-outline-success,
+.btn-outline-danger,
+.btn-outline-info {
+  border-color: #901781 !important;
+  background-color: #901781 !important;
+  color: #fff !important;
+}
+
+.btn-outline:hover,
+.btn-outline:focus,
+.btn-outline.focus,
+.btn-outline-primary:hover,
+.btn-outline-primary:focus,
+.btn-outline-primary.focus,
+.btn-outline-secondary:hover,
+.btn-outline-secondary:focus,
+.btn-outline-secondary.focus,
+.btn-outline-dark:hover,
+.btn-outline-dark:focus,
+.btn-outline-dark.focus,
+.btn-outline-light:hover,
+.btn-outline-light:focus,
+.btn-outline-warning:hover,
+.btn-outline-warning:focus,
+.btn-outline-success:hover,
+.btn-outline-success:focus,
+.btn-outline-danger:hover,
+.btn-outline-danger:focus,
+.btn-outline-info:hover,
+.btn-outline-info:focus {
+  border-color: #901781 !important;
+  background-color: #901781 !important;
+  color: #fff !important;
+}
+
+.btn-outline:not(:disabled):not(.disabled):active,
+.btn-outline:not(:disabled):not(.disabled).active,
+.btn-outline-primary:not(:disabled):not(.disabled):active,
+.btn-outline-primary:not(:disabled):not(.disabled).active,
+.btn-outline-secondary:not(:disabled):not(.disabled):active,
+.btn-outline-secondary:not(:disabled):not(.disabled).active,
+.btn-outline-dark:not(:disabled):not(.disabled):active,
+.btn-outline-dark:not(:disabled):not(.disabled).active,
+.show > .btn-outline.dropdown-toggle,
+.show > .btn-outline-primary.dropdown-toggle,
+.show > .btn-outline-secondary.dropdown-toggle,
+.show > .btn-outline-dark.dropdown-toggle {
+  border-color: #901781 !important;
+  background-color: #901781 !important;
+  color: #fff !important;
+}
+
+/* Product quantity +/- buttons: solid primary instead of outline */
+.product-single-qty .btn.btn-outline,
+.product-single-qty .btn-outline {
+  border-color: #901781 !important;
+  background-color: #901781 !important;
+  color: #fff !important;
+}
+
+.product-single-qty .btn-outline:hover,
+.product-single-qty .btn-outline:active,
+.product-single-qty .btn-outline:focus,
+.product-single-qty .btn.btn-outline:hover,
+.product-single-qty .btn.btn-outline:active {
+  border-color: #901781 !important;
+  background-color: #901781 !important;
+  color: #fff !important;
 }
