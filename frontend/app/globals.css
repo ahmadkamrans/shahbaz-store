@@ -24,12 +24,12 @@
   width: auto;
   max-width: 197px;
   height: auto;
-  max-height: 109px;
+  max-height: 85px;
 }
 
 /* Footer: larger logo (theme sets .logo-footer img max-width: 115px) */
 .logo-footer img {
-  max-width: 180px !important;
+  max-width: 109px !important;
   width: auto;
   height: auto;
 }
@@ -667,8 +667,8 @@ button,
 button[type="button"],
 button[type="submit"],
 .nav-link,
-.nav-item > a,
-.nav-item > a.nav-link,
+.nav-item>a,
+.nav-item>a.nav-link,
 .nav-tabs .nav-item .nav-link,
 .nav-tabs .nav-item a.nav-link,
 .product-single-tabs .nav-link,
@@ -727,7 +727,7 @@ ul.nav.product-filter-items .nav-item a,
 
 /* Rating link specific */
 .ratings-container .rating-link,
-.product-ratings + .rating-link {
+.product-ratings+.rating-link {
   cursor: pointer !important;
   -webkit-user-select: none !important;
   -moz-user-select: none !important;
