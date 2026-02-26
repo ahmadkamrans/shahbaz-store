@@ -379,10 +379,10 @@ body {
 .btn-outline-secondary:not(:disabled):not(.disabled).active,
 .btn-outline-dark:not(:disabled):not(.disabled):active,
 .btn-outline-dark:not(:disabled):not(.disabled).active,
-.show > .btn-outline.dropdown-toggle,
-.show > .btn-outline-primary.dropdown-toggle,
-.show > .btn-outline-secondary.dropdown-toggle,
-.show > .btn-outline-dark.dropdown-toggle {
+.show>.btn-outline.dropdown-toggle,
+.show>.btn-outline-primary.dropdown-toggle,
+.show>.btn-outline-secondary.dropdown-toggle,
+.show>.btn-outline-dark.dropdown-toggle {
   border-color: #901781 !important;
   background-color: #901781 !important;
   color: #fff !important;
@@ -404,6 +404,72 @@ body {
   border-color: #901781 !important;
   background-color: #901781 !important;
   color: #fff !important;
+}
+
+/* Header / navbar: primary background, white text and icons */
+.header .header-middle,
+.header-middle {
+  background-color: #901781 !important;
+}
+
+.header .main-nav .menu>li>a,
+.header .main-nav .menu li a,
+.header-middle .menu a {
+  color: #fff !important;
+}
+
+.header .main-nav .menu>li.active>a,
+.header .main-nav .menu>li:hover>a,
+.header .main-nav .menu>li.active a {
+  color: #fff !important;
+  background: rgba(255, 255, 255, 0.15) !important;
+}
+
+.header .main-nav .menu>li.active {
+  border-top-color: #fff !important;
+}
+
+.header .header-icon,
+.header .header-icon i,
+.header .mobile-menu-toggler,
+.header .mobile-menu-toggler.text-dark {
+  color: #fff !important;
+}
+
+.header .header-icon:hover,
+.header .mobile-menu-toggler:hover {
+  color: rgba(255, 255, 255, 0.9) !important;
+}
+
+/* Cart icon in header: make visible on purple background + prevent clipping */
+.header .header-middle,
+.header .header-right,
+.header .cart-dropdown,
+.header .cart-dropdown a.dropdown-toggle,
+.header-middle.sticky-header.fixed,
+.header .header-middle.sticky-header.fixed {
+  overflow: visible !important;
+}
+
+.header .cart-dropdown .cart-toggle,
+.header .cart-dropdown a.dropdown-toggle,
+.header .cart-dropdown .minicart-icon {
+  color: #fff !important;
+  border-color: #fff !important;
+}
+
+.header .cart-dropdown .minicart-icon:before {
+  border-color: #fff !important;
+}
+
+.header .cart-dropdown .cart-toggle:hover,
+.header .cart-dropdown a.dropdown-toggle:hover {
+  color: rgba(255, 255, 255, 0.9) !important;
+}
+
+.header .cart-dropdown .cart-toggle:hover .minicart-icon:before,
+.header .cart-dropdown a.dropdown-toggle:hover .minicart-icon:before {
+  border-color: rgba(255, 255, 255, 0.9) !important;
 }
 
 /* Footer: primary background, white text and links, solid social icons */

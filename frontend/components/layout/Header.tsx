@@ -10,6 +10,11 @@ import { MobileMenu } from "./MobileMenu";
 import { useCart } from "@/lib/store/cart-store";
 import { headerLinksApi, HeaderLink } from "@/lib/api/headerLinks";
 
+const DEFAULT_NAV_LINKS: HeaderLink[] = [
+  { id: "home", label: "Home", url: "/", order: 0 },
+  { id: "products", label: "Products", url: "/products", order: 1 },
+];
+
 export function Header() {
   const pathname = usePathname();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -71,10 +76,15 @@ export function Header() {
               <ul className="menu">
                 {linksLoading ? (
                   <li>
-                    <span style={{ padding: "0 15px" }}>Loading...</span>
+                    <div className="text-white" style={{ padding: "21px 0px" }}>
+                      Loading...
+                    </div>
                   </li>
-                ) : headerLinks.length > 0 ? (
-                  headerLinks.map((link) => (
+                ) : (
+                  (headerLinks.length > 0
+                    ? headerLinks
+                    : DEFAULT_NAV_LINKS
+                  ).map((link) => (
                     <li
                       key={link._id || link.id}
                       className={isLinkActive(link.url) ? "active" : ""}
@@ -92,7 +102,7 @@ export function Header() {
                       )}
                     </li>
                   ))
-                ) : null}
+                )}
               </ul>
             </nav>
           </div>
@@ -107,9 +117,10 @@ export function Header() {
             </button>
           </div>
 
-          <Link href="/" className="logo header-logo-center">
+          <Link href="/" className="logo header-logo-center ">
             <Image
-              src="/assets/images/logo.jpeg"
+              style={{ borderRadius: "8px" }}
+              src="/assets/images/logo-navbar.jpeg"
               width={180}
               height={72}
               alt="Shahbaz"
@@ -154,7 +165,7 @@ export function Header() {
       <MobileMenu
         isOpen={mobileMenuOpen}
         onClose={() => setMobileMenuOpen(false)}
-        headerLinks={headerLinks}
+        headerLinks={headerLinks.length > 0 ? headerLinks : DEFAULT_NAV_LINKS}
       />
     </header>
   );
