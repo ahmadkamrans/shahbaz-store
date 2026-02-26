@@ -48,7 +48,35 @@ if (process.env.ELASTICSEARCH_ENABLED === 'true') {
 const app = express();
 
 // Middleware
-app.use(cors());
+// CORS configuration - allow all origins (including ngrok and other machines)
+const corsOptions = {
+  origin: function (origin, callback) {
+    // Allow requests with no origin (like mobile apps, Postman, or curl)
+    // This also allows all origins including ngrok, localhost, and remote machines
+    callback(null, true);
+  },
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+  allowedHeaders: [
+    'Content-Type',
+    'Authorization',
+    'ngrok-skip-browser-warning',
+    'X-Requested-With',
+    'Accept',
+    'Origin',
+    'Access-Control-Request-Method',
+    'Access-Control-Request-Headers',
+  ],
+  exposedHeaders: ['Content-Range', 'X-Content-Range'],
+  preflightContinue: false,
+  optionsSuccessStatus: 204,
+};
+
+app.use(cors(corsOptions));
+
+// Handle preflight requests explicitly (fallback)
+app.options('*', cors(corsOptions));
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
@@ -72,6 +100,15 @@ app.use('/api/upload', uploadRoutes);
 // Health check
 app.get('/api/health', (req, res) => {
   res.json({ success: true, message: 'Server is running' });
+});
+
+// 404 handler - must be before error handler
+app.use((req, res, next) => {
+  res.status(404).json({
+    success: false,
+    status: 'error',
+    message: `Route ${req.originalUrl} not found`
+  });
 });
 
 // Error handler (must be last)

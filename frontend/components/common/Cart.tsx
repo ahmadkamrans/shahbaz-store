@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
+import toast from 'react-hot-toast';
 import { useCart } from '@/lib/store/cart-store';
 import { formatCurrency } from '@/lib/utils/currency';
 
@@ -98,6 +99,7 @@ export function Cart({ isOpen, onToggle }: CartProps) {
                         onClick={(e) => {
                           e.preventDefault();
                           removeItem(item.id);
+                          toast.success(`${item.product.name} removed from cart`);
                         }}
                       >
                         <span>×</span>

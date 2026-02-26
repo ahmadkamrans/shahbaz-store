@@ -32,6 +32,7 @@ export default function ProductsClient({
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [allProducts, setAllProducts] = useState<Product[]>([]);
+  const [loadingProducts, setLoadingProducts] = useState(false);
 
   // Sync props when they change (from router.refresh())
   useEffect(() => {
@@ -45,10 +46,29 @@ export default function ProductsClient({
   useEffect(() => {
     const fetchAllProducts = async () => {
       try {
-        const response = await productsApi.getAll({ limit: 1000 });
-        setAllProducts(response.products);
+        setLoadingProducts(true);
+        // Fetch all products with a high limit, or fetch in batches if needed
+        let allFetchedProducts: Product[] = [];
+        let currentPage = 1;
+        let hasMore = true;
+        
+        while (hasMore) {
+          const response = await productsApi.getAll({ page: currentPage, limit: 100 });
+          allFetchedProducts = [...allFetchedProducts, ...response.products];
+          
+          if (response.products.length < 100 || currentPage >= response.pagination.pages) {
+            hasMore = false;
+          } else {
+            currentPage++;
+          }
+        }
+        
+        setAllProducts(allFetchedProducts);
       } catch (error) {
         console.error("Error fetching products for selector:", error);
+        toast.error("Failed to load products for related products selector");
+      } finally {
+        setLoadingProducts(false);
       }
     };
     if (isModalOpen) {
@@ -69,6 +89,7 @@ export default function ProductsClient({
     lowStockThreshold: 10,
     isActive: true,
     featured: false,
+    sku: "",
     barcode: "",
     tags: [] as string[],
     relatedProducts: [] as string[],
@@ -367,6 +388,7 @@ export default function ProductsClient({
       stock: product.stock ?? 0,
       trackInventory: (product as any).trackInventory ?? true,
       lowStockThreshold: (product as any).lowStockThreshold ?? 10,
+      sku: product.sku || "",
       isActive: product.isActive ?? true,
       featured: (product as any).featured ?? false,
       barcode: (product as any).barcode || "",
@@ -406,6 +428,7 @@ export default function ProductsClient({
       lowStockThreshold: 10,
       isActive: true,
       featured: false,
+      sku: "",
       barcode: "",
       tags: [],
       relatedProducts: [],
@@ -849,22 +872,41 @@ export default function ProductsClient({
                 />
               </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Barcode
-                </label>
-                <p className="text-xs text-gray-500 mb-2">
-                  Product barcode (auto-generated if not provided)
-                </p>
-                <input
-                  type="text"
-                  value={formData.barcode}
-                  onChange={(e) =>
-                    setFormData({ ...formData, barcode: e.target.value.toUpperCase() })
-                  }
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md"
-                  placeholder="Auto-generated if empty"
-                />
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    SKU
+                  </label>
+                  <p className="text-xs text-gray-500 mb-2">
+                    Stock Keeping Unit (optional)
+                  </p>
+                  <input
+                    type="text"
+                    value={formData.sku}
+                    onChange={(e) =>
+                      setFormData({ ...formData, sku: e.target.value })
+                    }
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                    placeholder="Product SKU"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Barcode
+                  </label>
+                  <p className="text-xs text-gray-500 mb-2">
+                    Product barcode (auto-generated if not provided)
+                  </p>
+                  <input
+                    type="text"
+                    value={formData.barcode}
+                    onChange={(e) =>
+                      setFormData({ ...formData, barcode: e.target.value.toUpperCase() })
+                    }
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                    placeholder="Auto-generated if empty"
+                  />
+                </div>
               </div>
 
               <div className="border-t pt-4">
@@ -1177,9 +1219,15 @@ export default function ProductsClient({
                     }}
                     className="flex-1 px-3 py-2 border border-gray-300 rounded-md"
                     defaultValue=""
+                    disabled={loadingProducts}
                   >
-                    <option value="">Select a product to add...</option>
-                    {allProducts
+                    <option value="">
+                      {loadingProducts ? "Loading products..." : "Select a product to add..."}
+                    </option>
+                    {!loadingProducts && allProducts.length === 0 && (
+                      <option value="" disabled>No products available</option>
+                    )}
+                    {!loadingProducts && allProducts
                       .filter((p) => {
                         const productId = p._id || p.id || "";
                         // Don't show current product or already added products

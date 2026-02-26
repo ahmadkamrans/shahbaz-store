@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
+import toast from "react-hot-toast";
 import { useCart } from "@/lib/store/cart-store";
 import { discountCodesApi } from "@/lib/api/discountCodes";
 import { formatCurrency } from "@/lib/utils/currency";
@@ -49,15 +50,20 @@ export default function CartPage() {
         setCouponError("");
         // Store discount code in localStorage for checkout
         localStorage.setItem('appliedDiscountCode', couponCode.trim().toUpperCase());
+        toast.success(`Discount code "${couponCode.trim().toUpperCase()}" applied!`, {
+          icon: '🎉',
+        });
       } else {
         setCouponError(result.message || "Invalid coupon code");
         setDiscountAmount(0);
         localStorage.removeItem('appliedDiscountCode');
+        toast.error(result.message || "Invalid coupon code");
       }
     } catch (error: any) {
       setCouponError(error.message || "Failed to validate coupon code");
       setDiscountAmount(0);
       localStorage.removeItem('appliedDiscountCode');
+      toast.error(error.message || "Failed to validate coupon code");
     } finally {
       setValidatingCoupon(false);
     }
@@ -65,7 +71,13 @@ export default function CartPage() {
 
   const handleQuantityChange = (itemId: string, value: string) => {
     const qty = parseInt(value, 10);
-    if (!Number.isNaN(qty) && qty >= 1) updateQuantity(itemId, qty);
+    if (!Number.isNaN(qty) && qty >= 1) {
+      const item = items.find(i => i.id === itemId);
+      updateQuantity(itemId, qty);
+      if (item) {
+        toast.success(`Quantity updated to ${qty}`, { duration: 2000 });
+      }
+    }
   };
 
   return (
@@ -126,6 +138,7 @@ export default function CartPage() {
                               onClick={(e) => {
                                 e.preventDefault();
                                 removeItem(item.id);
+                                toast.success(`${item.product.name} removed from cart`);
                               }}
                             />
                           </figure>

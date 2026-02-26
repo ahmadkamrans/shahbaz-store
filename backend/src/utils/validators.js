@@ -60,6 +60,7 @@ export const categorySchema = Joi.object({
   name: Joi.string().trim().min(1).required(),
   description: Joi.string().trim().allow(''),
   image: Joi.string().allow(''),
+  parent: Joi.string().allow(null, ''),
   isActive: Joi.boolean().default(true),
   order: Joi.number().default(0)
 });

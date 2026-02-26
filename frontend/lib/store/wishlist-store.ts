@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import toast from 'react-hot-toast';
 import { Product } from '@/types';
 import { wishlistApi } from '@/lib/api/wishlist';
 import { getAuthToken } from '@/lib/api/config';
@@ -36,10 +37,15 @@ export const useWishlist = create<WishlistStore>((set, get) => ({
     if (!getAuthToken()) {
       // If not logged in, redirect to login or show message
       if (typeof window !== 'undefined') {
-        const shouldLogin = confirm('Please login to add items to wishlist. Go to login page?');
-        if (shouldLogin) {
-          window.location.href = '/login';
-        }
+        toast.error('Please login to add items to wishlist', {
+          duration: 4000,
+        });
+        // Small delay to show toast before redirect
+        setTimeout(() => {
+          if (confirm('Go to login page?')) {
+            window.location.href = '/login';
+          }
+        }, 500);
       }
       return;
     }
@@ -51,9 +57,7 @@ export const useWishlist = create<WishlistStore>((set, get) => ({
     } catch (error: any) {
       console.error('Failed to add to wishlist:', error);
       const errorMessage = error?.message || 'Failed to add product to wishlist';
-      if (typeof window !== 'undefined') {
-        alert(errorMessage);
-      }
+      toast.error(errorMessage);
       throw error;
     }
   },

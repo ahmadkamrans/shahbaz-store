@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
+import toast from 'react-hot-toast';
 import { Swiper, SwiperSlide } from 'swiper/react';
 import { Thumbs, FreeMode } from 'swiper/modules';
 import 'swiper/css';
@@ -20,7 +21,7 @@ import { getAuthToken } from '@/lib/api/config';
 export default function ProductDetailPage() {
   const params = useParams();
   const { addItem } = useCart();
-  const { addItem: addToWishlist, removeItem, isInWishlist } = useWishlist();
+  const { addItem: addToWishlist, removeItem, isInWishlist, fetchWishlist } = useWishlist();
   const [product, setProduct] = useState<Product | null>(null);
   const [reviews, setReviews] = useState<Review[]>([]);
   const [loading, setLoading] = useState(true);
@@ -40,6 +41,11 @@ export default function ProductDetailPage() {
   const [nextProduct, setNextProduct] = useState<Product | null>(null);
 
   const productId = params.id as string;
+
+  // Fetch wishlist on mount
+  useEffect(() => {
+    fetchWishlist();
+  }, [fetchWishlist]);
 
   useEffect(() => {
     const fetchProduct = async () => {
@@ -131,6 +137,9 @@ export default function ProductDetailPage() {
         }
       }
       addItem(product, quantity, variantToAdd);
+      toast.success(`${product.name} added to cart`, {
+        icon: '🛒',
+      });
     }
   };
 
@@ -248,29 +257,31 @@ export default function ProductDetailPage() {
     try {
       if (isInWishlist(product.id)) {
         await removeItem(product.id);
+        toast.success('Removed from wishlist');
       } else {
         await addToWishlist(product);
+        toast.success('Added to wishlist');
       }
-    } catch (error) {
-      // Error is already handled in the store
+    } catch (error: any) {
+      toast.error(error?.message || 'Failed to update wishlist');
     }
   };
 
   const handleSubmitReview = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!product || !getAuthToken()) {
-      alert('Please login to submit a review');
+      toast.error('Please login to submit a review');
       return;
     }
 
     // Client-side validation
     if (reviewForm.comment.trim().length < 10) {
-      alert('Comment must be at least 10 characters long');
+      toast.error('Comment must be at least 10 characters long');
       return;
     }
 
     if (reviewForm.rating < 1 || reviewForm.rating > 5) {
-      alert('Rating must be between 1 and 5');
+      toast.error('Rating must be between 1 and 5');
       return;
     }
 
@@ -286,9 +297,11 @@ export default function ProductDetailPage() {
       const reviewsData = await reviewsApi.getProductReviews(product.id);
       setReviews(reviewsData);
       setReviewForm({ rating: 5, title: '', comment: '' });
-      alert('Review submitted successfully!');
+      toast.success('Review submitted successfully!', {
+        icon: '⭐',
+      });
     } catch (error: any) {
-      alert(error.message || 'Failed to submit review');
+      toast.error(error.message || 'Failed to submit review');
     } finally {
       setSubmittingReview(false);
     }
@@ -482,7 +495,7 @@ export default function ProductDetailPage() {
                   ></span>
                   <span className="tooltiptext tooltip-top"></span>
                 </div>
-                <a href="#" className="rating-link" onClick={(e) => { e.preventDefault(); setActiveTab('reviews'); }}>
+                <a href="#" className="rating-link" onClick={(e) => { e.preventDefault(); setActiveTab('reviews'); }} style={{ cursor: 'pointer' }}>
                   ({reviews.length} Review{reviews.length !== 1 ? 's' : ''})
                 </a>
               </div>
@@ -727,13 +740,13 @@ export default function ProductDetailPage() {
                           }
                           return type.charAt(0).toUpperCase() + type.slice(1);
                         });
-                        alert(`Please select: ${missingNames.join(', ')}`);
+                        toast.error(`Please select: ${missingNames.join(', ')}`);
                         return;
                       }
                       
                       // Check stock availability
                       if (variantStock !== null && variantStock === 0) {
-                        alert('This variant is out of stock');
+                        toast.error('This variant is out of stock');
                         return;
                       }
                     }
@@ -820,22 +833,26 @@ export default function ProductDetailPage() {
             <ul className="nav nav-tabs" role="tablist">
               <li className="nav-item">
                 <a
+                  href="#"
                   className={`nav-link ${activeTab === 'description' ? 'active' : ''}`}
                   onClick={(e) => {
                     e.preventDefault();
                     setActiveTab('description');
                   }}
+                  style={{ cursor: 'pointer', userSelect: 'none' }}
                 >
                   Description
                 </a>
               </li>
               <li className="nav-item">
                 <a
+                  href="#"
                   className={`nav-link ${activeTab === 'reviews' ? 'active' : ''}`}
                   onClick={(e) => {
                     e.preventDefault();
                     setActiveTab('reviews');
                   }}
+                  style={{ cursor: 'pointer', userSelect: 'none' }}
                 >
                   Reviews ({reviews.length})
                 </a>

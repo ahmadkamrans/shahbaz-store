@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import toast from "react-hot-toast";
 import { authApi } from "@/lib/api/auth";
 
 export default function LoginPage() {
@@ -24,10 +25,15 @@ export default function LoginPage() {
 
     try {
       await authApi.login({ email, password });
+      toast.success('Login successful!', {
+        icon: '👋',
+      });
       router.push("/");
       router.refresh();
     } catch (error: any) {
-      setLoginError(error.message || "Login failed. Please try again.");
+      const errorMessage = error.message || "Login failed. Please try again.";
+      toast.error(errorMessage);
+      setLoginError(errorMessage);
     } finally {
       setLoginLoading(false);
     }
@@ -47,12 +53,17 @@ export default function LoginPage() {
     try {
       await authApi.register({ name, email, password });
       setRegisterSuccess(true);
+      toast.success('Registration successful! Redirecting...', {
+        icon: '🎉',
+      });
       setTimeout(() => {
         router.push("/");
         router.refresh();
       }, 1500);
     } catch (error: any) {
-      setRegisterError(error.message || "Registration failed. Please try again.");
+      const errorMessage = error.message || "Registration failed. Please try again.";
+      toast.error(errorMessage);
+      setRegisterError(errorMessage);
     } finally {
       setRegisterLoading(false);
     }

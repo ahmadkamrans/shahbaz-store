@@ -9,9 +9,11 @@ import { Product } from "@/types";
 import { productsApi } from "@/lib/api/products";
 import { categoriesApi } from "@/lib/api/categories";
 import { Category } from "@/types";
+import { useWishlist } from "@/lib/store/wishlist-store";
 
 export default function ProductsPage() {
   const searchParams = useSearchParams();
+  const { fetchWishlist } = useWishlist();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [sortBy, setSortBy] = useState("default");
   const [products, setProducts] = useState<Product[]>([]);
@@ -28,11 +30,18 @@ export default function ProductsPage() {
   const [selectedSizes, setSelectedSizes] = useState<string[]>([]);
   const [selectedColors, setSelectedColors] = useState<string[]>([]);
 
+  // Fetch wishlist on mount
+  useEffect(() => {
+    fetchWishlist();
+  }, [fetchWishlist]);
+
   // Read search query from URL params on mount
   useEffect(() => {
     const search = searchParams.get('search');
     if (search) {
       setSearchQuery(search);
+    } else {
+      setSearchQuery(''); // Clear search query when no search param in URL
     }
   }, [searchParams]);
 

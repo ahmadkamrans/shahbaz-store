@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
+import toast from "react-hot-toast";
 import { Product } from "@/types";
 import { formatPrice } from "@/lib/utils";
 import { useCart } from "@/lib/store/cart-store";
@@ -204,13 +205,13 @@ export function QuickViewModal({ productId, product: initialProduct, isOpen, onC
             }
             return type.charAt(0).toUpperCase() + type.slice(1);
           });
-          alert(`Please select: ${missingNames.join(', ')}`);
+          toast.error(`Please select: ${missingNames.join(', ')}`);
           return;
         }
         
         // Check stock availability
         if (variantStock !== null && variantStock === 0) {
-          alert('This variant is out of stock');
+          toast.error('This variant is out of stock');
           return;
         }
       }
@@ -247,6 +248,9 @@ export function QuickViewModal({ productId, product: initialProduct, isOpen, onC
         }
       }
       addToCart(product, quantity, variantToAdd);
+      toast.success(`${product.name} added to cart`, {
+        icon: '🛒',
+      });
       onClose();
     }
   };
@@ -257,11 +261,13 @@ export function QuickViewModal({ productId, product: initialProduct, isOpen, onC
     try {
       if (isInWishlist(product.id)) {
         await removeItem(product.id);
+        toast.success('Removed from wishlist');
       } else {
         await addToWishlist(product);
+        toast.success('Added to wishlist');
       }
-    } catch (error) {
-      // Error is already handled in the store
+    } catch (error: any) {
+      toast.error(error?.message || 'Failed to update wishlist');
     }
   };
 

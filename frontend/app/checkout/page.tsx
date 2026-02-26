@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import toast from "react-hot-toast";
 import { useCart } from "@/lib/store/cart-store";
 import { ordersApi } from "@/lib/api/orders";
 import { getAuthToken } from "@/lib/api/config";
@@ -138,12 +139,14 @@ export default function CheckoutPage() {
     e.preventDefault();
     
     if (!getAuthToken()) {
+      toast.error("Please login to place an order");
       setOrderError("Please login to place an order");
       router.push('/login');
       return;
     }
 
     if (items.length === 0) {
+      toast.error("Your cart is empty");
       setOrderError("Your cart is empty");
       return;
     }
@@ -154,6 +157,7 @@ export default function CheckoutPage() {
     // Validate form
     if (!form.checkValidity()) {
       form.reportValidity();
+      toast.error("Please fill in all required fields");
       setOrderError("Please fill in all required fields");
       return;
     }
@@ -196,12 +200,14 @@ export default function CheckoutPage() {
       // Validate that country and state are selected
       if (differentShippingOpen) {
         if (!shippingCountry || !shippingState) {
+          toast.error("Please select both country and state/province");
           setOrderError("Please select both country and state/province");
           setSubmitting(false);
           return;
         }
       } else {
         if (!billingCountry || !billingState) {
+          toast.error("Please select both country and state/province");
           setOrderError("Please select both country and state/province");
           setSubmitting(false);
           return;
@@ -210,6 +216,7 @@ export default function CheckoutPage() {
 
       // Validate address fields
       if (!shippingAddress.street || !shippingAddress.city || !shippingAddress.state || !shippingAddress.zipCode || !shippingAddress.country) {
+        toast.error("Please fill in all required address fields");
         setOrderError("Please fill in all required address fields");
         setSubmitting(false);
         return;
@@ -258,6 +265,10 @@ export default function CheckoutPage() {
       // Clear discount code from localStorage after successful order
       localStorage.removeItem('appliedDiscountCode');
       clearCart();
+      toast.success('Order placed successfully!', {
+        icon: '🎉',
+        duration: 4000,
+      });
       router.push(`/orders/${order._id}`);
     } catch (error: unknown) {
       console.error('Order placement error:', error);
@@ -266,6 +277,7 @@ export default function CheckoutPage() {
         : (error as { response?: { data?: { message?: string } }; message?: string })?.response?.data?.message 
           || (error as { message?: string })?.message 
           || "Failed to place order. Please try again.";
+      toast.error(errorMessage);
       setOrderError(errorMessage);
     } finally {
       setSubmitting(false);

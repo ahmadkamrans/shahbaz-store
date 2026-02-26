@@ -16,7 +16,7 @@ import { formatCurrency } from "@/lib/utils/currency";
 const tabs = ["kitchen", "dining", "bedroom", "living", "office", "outdoor"];
 
 export default function HomePage() {
-  const { addItem: addToWishlist, removeItem, isInWishlist } = useWishlist();
+  const { addItem: addToWishlist, removeItem, isInWishlist, fetchWishlist } = useWishlist();
   const { addItem: addToCart } = useCart();
   const [activeTab, setActiveTab] = useState("kitchen");
   const [featuredProducts, setFeaturedProducts] = useState<
@@ -44,6 +44,11 @@ export default function HomePage() {
       // Error is already handled in the store
     }
   };
+
+  // Fetch wishlist on mount
+  useEffect(() => {
+    fetchWishlist();
+  }, [fetchWishlist]);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -262,11 +267,13 @@ export default function HomePage() {
               {tabs.map((tab) => (
                 <li key={tab} className="nav-item product-filter-item">
                   <a
+                    href="#"
                     className={`nav-link ${activeTab === tab ? "active" : ""}`}
                     onClick={(e) => {
                       e.preventDefault();
                       setActiveTab(tab);
                     }}
+                    style={{ cursor: 'pointer', userSelect: 'none' }}
                   >
                     {tab.charAt(0).toUpperCase() + tab.slice(1).toUpperCase()}
                   </a>

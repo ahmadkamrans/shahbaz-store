@@ -106,33 +106,44 @@ export default function CategoriesClient({ initialCategories }: CategoriesClient
             </tr>
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
-            {categories.map((category) => (
-              <tr key={category._id || category.id}>
-                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                  {category.name}
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                  {category.slug}
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                  {getParentName(category.parentId)}
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                  <button
-                    onClick={() => handleEdit(category)}
-                    className="text-custom-blue hover:text-custom-blue-light mr-4"
-                  >
-                    Edit
-                  </button>
-                  <button
-                    onClick={() => handleDelete(category._id || category.id || "")}
-                    className="text-red-600 hover:text-red-900"
-                  >
-                    Delete
-                  </button>
-                </td>
-              </tr>
-            ))}
+            {categories
+              .sort((a, b) => {
+                // Sort: top-level categories first, then by name
+                if (!a.parentId && b.parentId) return -1;
+                if (a.parentId && !b.parentId) return 1;
+                return a.name.localeCompare(b.name);
+              })
+              .map((category) => (
+                <tr 
+                  key={category._id || category.id}
+                  className={category.parentId ? 'bg-gray-50' : ''}
+                >
+                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                    {category.parentId && <span className="text-gray-400 mr-2">└─</span>}
+                    {category.name}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    {category.slug}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    {getParentName(category.parentId)}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                    <button
+                      onClick={() => handleEdit(category)}
+                      className="text-custom-blue hover:text-custom-blue-light mr-4"
+                    >
+                      Edit
+                    </button>
+                    <button
+                      onClick={() => handleDelete(category._id || category.id || "")}
+                      className="text-red-600 hover:text-red-900"
+                    >
+                      Delete
+                    </button>
+                  </td>
+                </tr>
+              ))}
           </tbody>
         </table>
       </div>
@@ -178,15 +189,26 @@ export default function CategoriesClient({ initialCategories }: CategoriesClient
                   onChange={(e) => setFormData({ ...formData, parentId: e.target.value })}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md"
                 >
-                  <option value="">None</option>
+                  <option value="">None (Top Level)</option>
                   {categories
-                    .filter((c) => c._id !== editingCategory?._id && c.id !== editingCategory?.id)
+                    .filter((c) => {
+                      // Exclude the category being edited
+                      if (c._id === editingCategory?._id || c.id === editingCategory?.id) {
+                        return false;
+                      }
+                      // Only show top-level categories (categories without parents) as parent options
+                      // This maintains the 2-level hierarchy limit
+                      return !c.parentId;
+                    })
                     .map((cat) => (
                       <option key={cat._id || cat.id} value={cat._id || cat.id}>
                         {cat.name}
                       </option>
                     ))}
                 </select>
+                <p className="mt-1 text-xs text-gray-500">
+                  Only top-level categories can be selected as parents (max 2 levels deep)
+                </p>
               </div>
               <div className="flex justify-end space-x-3">
                 <button

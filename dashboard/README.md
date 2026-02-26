@@ -2,6 +2,23 @@ This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-
 
 ## Getting Started
 
+### Environment Variables
+
+Before running the development server, you need to set up your environment variables:
+
+1. Copy the example environment file:
+   ```bash
+   cp .env.example .env
+   ```
+
+2. Update the `.env` file with your configuration:
+   - `NEXT_PUBLIC_API_URL`: The base URL of your backend API server
+     - For local development: `http://localhost:5000/api`
+     - For production: `https://your-api-domain.com/api`
+   - `NODE_ENV`: Set to `development` for local development or `production` for production builds
+
+### Running the Development Server
+
 First, run the development server:
 
 ```bash

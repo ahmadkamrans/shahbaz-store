@@ -542,3 +542,79 @@ body {
   color: #fff !important;
   opacity: 0.9;
 }
+
+/* Fix cursor for all interactive elements - HIGH SPECIFICITY */
+a[href],
+a[href="#"],
+a[onclick],
+button,
+button[type="button"],
+button[type="submit"],
+.nav-link,
+.nav-item > a,
+.nav-item > a.nav-link,
+.nav-tabs .nav-item .nav-link,
+.nav-tabs .nav-item a.nav-link,
+.product-single-tabs .nav-link,
+.product-single-tabs .nav-item a,
+.btn,
+.btn-link,
+[role="button"],
+[onclick],
+input[type="button"],
+input[type="submit"],
+input[type="reset"],
+label[for],
+select,
+.swatch,
+.config-size-list a,
+.config-swatch-list a,
+.breadcrumb-item a,
+.rating-link,
+.social-icon,
+.btn-icon,
+.btn-icon-wish,
+.btn-quickview,
+.btn-add-cart,
+.sidebar-toggle,
+.sidebar-toggle-clean,
+.cat-list a,
+.page-link,
+.pagination a,
+.toolbox a,
+.product-action a,
+.product-action button,
+.dropdown-toggle,
+.cart-toggle,
+.search-toggle,
+.mobile-menu-toggler {
+  cursor: pointer !important;
+  -webkit-user-select: none !important;
+  -moz-user-select: none !important;
+  -ms-user-select: none !important;
+  user-select: none !important;
+}
+
+/* Extra specific rules for nav tabs */
+ul.nav.nav-tabs a.nav-link,
+ul.nav.nav-tabs .nav-item a.nav-link,
+ul.nav.product-filter-items a.nav-link,
+ul.nav.product-filter-items .nav-item a,
+.product-single-tabs ul.nav.nav-tabs a.nav-link,
+.product-single-tabs ul.nav.nav-tabs .nav-item a {
+  cursor: pointer !important;
+  -webkit-user-select: none !important;
+  -moz-user-select: none !important;
+  -ms-user-select: none !important;
+  user-select: none !important;
+}
+
+/* Rating link specific */
+.ratings-container .rating-link,
+.product-ratings + .rating-link {
+  cursor: pointer !important;
+  -webkit-user-select: none !important;
+  -moz-user-select: none !important;
+  -ms-user-select: none !important;
+  user-select: none !important;
+}

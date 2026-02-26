@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
+import toast from 'react-hot-toast';
 import { Product } from '@/types';
 import { formatPrice } from '@/lib/utils';
 import { useWishlist } from '@/lib/store/wishlist-store';
@@ -29,17 +30,22 @@ export function ProductCard({ product, showQuickView = true, viewMode = 'grid' }
     try {
       if (isInWishlist(product.id)) {
         await removeItem(product.id);
+        toast.success('Removed from wishlist');
       } else {
         await addToWishlist(product);
+        toast.success('Added to wishlist');
       }
-    } catch (error) {
-      // Error is already handled in the store
+    } catch (error: any) {
+      toast.error(error?.message || 'Failed to update wishlist');
     }
   };
 
   const handleAddToCart = (e: React.MouseEvent) => {
     e.preventDefault();
     addToCart(product);
+    toast.success(`${product.name} added to cart`, {
+      icon: '🛒',
+    });
   };
 
   return (

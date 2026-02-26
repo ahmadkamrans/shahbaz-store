@@ -4,7 +4,22 @@ import { isValidObjectId } from '../utils/helpers.js';
 
 export const getCategories = async (req, res, next) => {
   try {
-    const categories = await Category.find({ isActive: true })
+    const { parent } = req.query;
+    const query = { isActive: true };
+    
+    // If parent query param is provided, filter by parent
+    if (parent !== undefined) {
+      if (parent === 'null' || parent === '') {
+        query.parent = null; // Get only top-level categories
+      } else if (isValidObjectId(parent)) {
+        query.parent = parent; // Get categories with specific parent
+      } else {
+        throw new AppError('Invalid parent category ID', 400);
+      }
+    }
+
+    const categories = await Category.find(query)
+      .populate('parent', 'name slug')
       .sort({ order: 1, name: 1 });
 
     res.json({
@@ -24,7 +39,7 @@ export const getCategory = async (req, res, next) => {
         { slug: req.params.id }
       ],
       isActive: true
-    });
+    }).populate('parent', 'name slug');
 
     if (!category) {
       throw new AppError('Category not found', 404);
@@ -41,15 +56,45 @@ export const getCategory = async (req, res, next) => {
 
 export const createCategory = async (req, res, next) => {
   try {
-    const category = await Category.create(req.body);
+    const { parent, ...categoryData } = req.body;
+    
+    // Validate parent if provided
+    if (parent) {
+      if (!isValidObjectId(parent)) {
+        throw new AppError('Invalid parent category ID format', 400);
+      }
+      
+      const parentCategory = await Category.findById(parent);
+      if (!parentCategory) {
+        throw new AppError('Parent category not found', 404);
+      }
+      
+      if (!parentCategory.isActive) {
+        throw new AppError('Parent category is not active', 400);
+      }
+      
+      // Prevent nesting more than 2 levels deep
+      if (parentCategory.parent) {
+        throw new AppError('Cannot nest categories more than 2 levels deep', 400);
+      }
+      
+      categoryData.parent = parent;
+    } else {
+      categoryData.parent = null;
+    }
+
+    const category = await Category.create(categoryData);
 
     res.status(201).json({
       success: true,
-      category
+      category: await Category.findById(category._id).populate('parent', 'name slug')
     });
   } catch (error) {
     if (error.code === 11000) {
       return next(new AppError('Category with this name already exists', 400));
+    }
+    if (error instanceof AppError) {
+      return next(error);
     }
     next(error);
   }
@@ -67,16 +112,62 @@ export const updateCategory = async (req, res, next) => {
       throw new AppError('Category not found', 404);
     }
 
-    Object.assign(category, req.body);
+    const { parent, ...updateData } = req.body;
+    
+    // Validate parent if provided
+    if (parent !== undefined) {
+      if (parent === null || parent === '') {
+        updateData.parent = null;
+      } else {
+        if (!isValidObjectId(parent)) {
+          throw new AppError('Invalid parent category ID format', 400);
+        }
+        
+        // Prevent circular reference: cannot set itself as parent
+        if (parent === req.params.id) {
+          throw new AppError('Category cannot be its own parent', 400);
+        }
+        
+        const parentCategory = await Category.findById(parent);
+        if (!parentCategory) {
+          throw new AppError('Parent category not found', 404);
+        }
+        
+        if (!parentCategory.isActive) {
+          throw new AppError('Parent category is not active', 400);
+        }
+        
+        // Prevent nesting more than 2 levels deep
+        if (parentCategory.parent) {
+          throw new AppError('Cannot nest categories more than 2 levels deep', 400);
+        }
+        
+        // Prevent setting a child category as parent
+        const isDescendant = await Category.findOne({ 
+          parent: req.params.id,
+          _id: parent 
+        });
+        if (isDescendant) {
+          throw new AppError('Cannot set a child category as parent', 400);
+        }
+        
+        updateData.parent = parent;
+      }
+    }
+
+    Object.assign(category, updateData);
     await category.save();
 
     res.json({
       success: true,
-      category
+      category: await Category.findById(category._id).populate('parent', 'name slug')
     });
   } catch (error) {
     if (error.code === 11000) {
       return next(new AppError('Category with this name already exists', 400));
+    }
+    if (error instanceof AppError) {
+      return next(error);
     }
     next(error);
   }
@@ -94,6 +185,12 @@ export const deleteCategory = async (req, res, next) => {
       throw new AppError('Category not found', 404);
     }
 
+    // Check if category has children
+    const childCount = await Category.countDocuments({ parent: req.params.id });
+    if (childCount > 0) {
+      throw new AppError(`Cannot delete category with ${childCount} child categor${childCount > 1 ? 'ies' : 'y'}. Please delete or reassign child categories first.`, 400);
+    }
+
     await category.deleteOne();
 
     res.json({
@@ -101,6 +198,9 @@ export const deleteCategory = async (req, res, next) => {
       message: 'Category deleted successfully'
     });
   } catch (error) {
+    if (error instanceof AppError) {
+      return next(error);
+    }
     next(error);
   }
 };
