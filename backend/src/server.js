@@ -49,10 +49,38 @@ const app = express();
 
 // Middleware
 // CORS configuration - allow all origins (including ngrok and other machines)
+// Explicitly allows localhost:3001 and other common development ports
 const corsOptions = {
   origin: function (origin, callback) {
     // Allow requests with no origin (like mobile apps, Postman, or curl)
-    // This also allows all origins including ngrok, localhost, and remote machines
+    if (!origin) {
+      return callback(null, true);
+    }
+    
+    // Normalize origin (remove trailing slash and convert to lowercase for comparison)
+    const normalizedOrigin = origin.replace(/\/$/, '').toLowerCase();
+    
+    // Explicitly allow common localhost ports (case-insensitive)
+    const allowedOrigins = [
+      'http://localhost:3000',
+      'http://localhost:3001',
+      'http://127.0.0.1:3000',
+      'http://127.0.0.1:3001',
+    ].map(o => o.toLowerCase());
+    
+    // Check if normalized origin matches allowed origins
+    if (allowedOrigins.includes(normalizedOrigin)) {
+      return callback(null, true);
+    }
+    
+    // Allow ngrok URLs, localhost, or 127.0.0.1 in any form
+    if (normalizedOrigin.includes('ngrok') || 
+        normalizedOrigin.includes('localhost') || 
+        normalizedOrigin.includes('127.0.0.1')) {
+      return callback(null, true);
+    }
+    
+    // Allow all other origins as well (for flexibility in development)
     callback(null, true);
   },
   credentials: true,
@@ -64,6 +92,7 @@ const corsOptions = {
     'X-Requested-With',
     'Accept',
     'Origin',
+    'Referer',
     'Access-Control-Request-Method',
     'Access-Control-Request-Headers',
   ],
