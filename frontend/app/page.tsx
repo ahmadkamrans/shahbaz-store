@@ -19,13 +19,20 @@ export default function HomePage() {
   const { addItem: addToWishlist, removeItem, isInWishlist } = useWishlist();
   const { addItem: addToCart } = useCart();
   const [activeTab, setActiveTab] = useState("kitchen");
-  const [featuredProducts, setFeaturedProducts] = useState<Record<string, Product[]>>({});
+  const [featuredProducts, setFeaturedProducts] = useState<
+    Record<string, Product[]>
+  >({});
   const [allProducts, setAllProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [categoryMap, setCategoryMap] = useState<Record<string, string>>({});
-  const [quickViewProduct, setQuickViewProduct] = useState<Product | null>(null);
+  const [quickViewProduct, setQuickViewProduct] = useState<Product | null>(
+    null,
+  );
 
-  const handleToggleWishlist = async (e: React.MouseEvent, product: Product) => {
+  const handleToggleWishlist = async (
+    e: React.MouseEvent,
+    product: Product,
+  ) => {
     e.preventDefault();
     try {
       if (isInWishlist(product.id)) {
@@ -42,29 +49,29 @@ export default function HomePage() {
     const fetchData = async () => {
       try {
         setLoading(true);
-        
+
         // Fetch categories to map tab names to category IDs
         const categories = await categoriesApi.getCategories();
         const map: Record<string, string> = {};
-        
+
         // Create mapping from category names/slugs to IDs
-        categories.forEach(category => {
+        categories.forEach((category) => {
           const lowerName = category.name.toLowerCase().trim();
-          const lowerSlug = (category.slug || '').toLowerCase().trim();
+          const lowerSlug = (category.slug || "").toLowerCase().trim();
           map[lowerName] = category.id;
           if (lowerSlug) {
             map[lowerSlug] = category.id;
           }
         });
-        
+
         setCategoryMap(map);
 
         // Fetch products for each category tab
         const productsByCategory: Record<string, Product[]> = {};
-        
+
         for (const tab of tabs) {
           const categoryId = map[tab];
-          
+
           if (categoryId) {
             try {
               // Get products from this category
@@ -72,7 +79,7 @@ export default function HomePage() {
                 category: categoryId,
                 limit: 5,
               });
-              
+
               productsByCategory[tab] = result.products || [];
             } catch (error) {
               console.error(`Failed to fetch products for ${tab}:`, error);
@@ -81,7 +88,7 @@ export default function HomePage() {
           } else {
             // If no category found, try to find by name match
             const matchedCategory = categories.find(
-              cat => cat.name.toLowerCase().trim() === tab
+              (cat) => cat.name.toLowerCase().trim() === tab,
             );
             if (matchedCategory) {
               try {
@@ -91,7 +98,10 @@ export default function HomePage() {
                 });
                 productsByCategory[tab] = result.products || [];
               } catch (error) {
-                console.error(`Failed to fetch products for ${tab} (fallback):`, error);
+                console.error(
+                  `Failed to fetch products for ${tab} (fallback):`,
+                  error,
+                );
                 productsByCategory[tab] = [];
               }
             } else {
@@ -99,7 +109,7 @@ export default function HomePage() {
             }
           }
         }
-        
+
         setFeaturedProducts(productsByCategory);
 
         // Fetch all products for grid
@@ -225,7 +235,7 @@ export default function HomePage() {
                 <i className="icon-support line-height-1"></i>
                 <div className="info-box-content">
                   <h4 className="ls-25 line-height-1">ONLINE SUPPORT 24/7</h4>
-                  <p className="text-body">Lorem ipsum dolor sit amet.</p>
+                  <p className="text-body"> We are always here to help you.</p>
                 </div>
               </div>
             </div>
@@ -233,8 +243,8 @@ export default function HomePage() {
               <div className="info-box info-box-icon-left justify-content-sm-center justify-content-start p-0">
                 <i className="icon-secure-payment line-height-1"></i>
                 <div className="info-box-content">
-                  <h4 className="ls-25 line-height-1">SECURE PAYMENT</h4>
-                  <p className="text-body">Lorem ipsum dolor sit amet.</p>
+                  <h4 className="ls-25 line-height-1">Cash on Delivery</h4>
+                  <p className="text-body"> We accept cash on delivery.</p>
                 </div>
               </div>
             </div>
@@ -295,8 +305,6 @@ export default function HomePage() {
         </section>
       </div>
 
-
-
       <section>
         <div className="container">
           <div className="featured-section bg-white appear-animate">
@@ -307,83 +315,89 @@ export default function HomePage() {
             ) : (
               <div className="row">
                 {allProducts.map((product) => (
-                <div
-                  key={product.id}
-                  className="col-6 col-md-4 col-lg-3 col-xl-2"
-                >
-                  <div className="product-default inner-quickview inner-icon">
-                    <figure>
-                      <Link href={`/product/${product.slug}`}>
-                        <Image
-                          src={product.image}
-                          alt={product.name}
-                          width={257}
-                          height={257}
-                        />
-                      </Link>
-                      <div className="btn-icon-group">
+                  <div
+                    key={product.id}
+                    className="col-6 col-md-4 col-lg-3 col-xl-2"
+                  >
+                    <div className="product-default inner-quickview inner-icon">
+                      <figure>
+                        <Link href={`/product/${product.slug}`}>
+                          <Image
+                            src={product.image}
+                            alt={product.name}
+                            width={257}
+                            height={257}
+                          />
+                        </Link>
+                        <div className="btn-icon-group">
+                          <a
+                            href="#"
+                            className="btn-icon btn-add-cart product-type-simple"
+                            onClick={(e) => {
+                              e.preventDefault();
+                              addToCart(product);
+                            }}
+                          >
+                            <i className="icon-shopping-cart"></i>
+                          </a>
+                        </div>
                         <a
                           href="#"
-                          className="btn-icon btn-add-cart product-type-simple"
+                          className="btn-quickview"
+                          title="Quick View"
                           onClick={(e) => {
                             e.preventDefault();
-                            addToCart(product);
+                            setQuickViewProduct(product);
                           }}
                         >
-                          <i className="icon-shopping-cart"></i>
+                          Quick View
                         </a>
-                      </div>
-                      <a
-                        href="#"
-                        className="btn-quickview"
-                        title="Quick View"
-                        onClick={(e) => {
-                          e.preventDefault();
-                          setQuickViewProduct(product);
-                        }}
-                      >
-                        Quick View
-                      </a>
-                    </figure>
-                    <div className="product-details">
-                      <div className="category-wrap">
-                        <div className="category-list">
-                          <Link href="/products" className="product-category">
-                            {product.category}
+                      </figure>
+                      <div className="product-details">
+                        <div className="category-wrap">
+                          <div className="category-list">
+                            <Link href="/products" className="product-category">
+                              {product.category}
+                            </Link>
+                          </div>
+                          <a
+                            href="#"
+                            title={
+                              isInWishlist(product.id)
+                                ? "Remove from Wishlist"
+                                : "Add to Wishlist"
+                            }
+                            className={`btn-icon-wish ${isInWishlist(product.id) ? "added-wishlist" : ""}`}
+                            onClick={(e) => handleToggleWishlist(e, product)}
+                          >
+                            <i className="icon-heart"></i>
+                          </a>
+                        </div>
+                        <h3 className="product-title">
+                          <Link href={`/product/${product.slug}`}>
+                            {product.name}
                           </Link>
+                        </h3>
+                        <div className="ratings-container">
+                          <div className="product-ratings">
+                            <span
+                              className="ratings"
+                              style={{
+                                width: `${(product.rating || 0) * 20}%`,
+                              }}
+                            ></span>
+                            <span className="tooltiptext tooltip-top"></span>
+                          </div>
                         </div>
-                        <a
-                          href="#"
-                          title={isInWishlist(product.id) ? "Remove from Wishlist" : "Add to Wishlist"}
-                          className={`btn-icon-wish ${isInWishlist(product.id) ? 'added-wishlist' : ''}`}
-                          onClick={(e) => handleToggleWishlist(e, product)}
-                        >
-                          <i className="icon-heart"></i>
-                        </a>
-                      </div>
-                      <h3 className="product-title">
-                        <Link href={`/product/${product.slug}`}>
-                          {product.name}
-                        </Link>
-                      </h3>
-                      <div className="ratings-container">
-                        <div className="product-ratings">
-                          <span
-                            className="ratings"
-                            style={{ width: `${(product.rating || 0) * 20}%` }}
-                          ></span>
-                          <span className="tooltiptext tooltip-top"></span>
+                        <div className="price-box">
+                          <span className="product-price">
+                            {formatCurrency(product.price)}
+                          </span>
                         </div>
-                      </div>
-                      <div className="price-box">
-                        <span className="product-price">
-                          {formatCurrency(product.price)}
-                        </span>
                       </div>
                     </div>
                   </div>
-                </div>
-              ))}
+                ))}
               </div>
             )}
             <Link href="/products" className="btn with-icon align-center font2">
@@ -392,8 +406,6 @@ export default function HomePage() {
           </div>
 
           <hr />
-
-     
         </div>
       </section>
 

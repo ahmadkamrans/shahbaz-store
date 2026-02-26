@@ -153,7 +153,7 @@ export function Header() {
       </div>
       {/* End .header-middle */}
 
-      <div className="container">
+      <div className="container mt-4">
         <div className="header-bottom w-100">
           <h4 className="mb-0 text-center pr-3 pl-3">
             Get 10% OFF at the Shahbaz Kitchen Selection -{" "}
