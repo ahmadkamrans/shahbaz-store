@@ -18156,7 +18156,8 @@ hr.vertical {
 a.with-icon {
     font: 700 1.4rem "Open Sans", sans-serif;
     letter-spacing: 0.15em;
-    color: #901781;
+    background-color: #901781;
+    color: #fff;
     border-bottom: 1px solid transparent
 }
 

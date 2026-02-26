@@ -13,6 +13,7 @@ export function Footer() {
           <div className="col-6 col-lg-3">
             <Link href="/" className="logo-footer">
               <Image
+                style={{ borderRadius: "24px" }}
                 src="/assets/images/logo.jpeg"
                 width={280}
                 height={58}

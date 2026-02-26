@@ -405,3 +405,62 @@ body {
   background-color: #901781 !important;
   color: #fff !important;
 }
+
+/* Footer: primary background, white text and links, solid social icons */
+.footer {
+  background-color: #901781 !important;
+}
+
+.footer .footer-bottom {
+  border-top-color: rgba(255, 255, 255, 0.25) !important;
+}
+
+.footer .footer-middle,
+.footer .footer-bottom,
+.footer .widget-title,
+.footer .widget-content,
+.footer .widget-content a,
+.footer .widget-content ul li a,
+.footer-middle a,
+.footer-middle p,
+.footer .text-body,
+.footer .footer-copyright {
+  color: #fff !important;
+}
+
+.footer .widget-content a:hover,
+.footer-middle a:hover {
+  color: rgba(255, 255, 255, 0.85) !important;
+}
+
+/* Footer social icons: solid (opaque) with white icon */
+.footer .social-icon,
+.footer .social-icon:not(:hover):not(:active):not(:focus) {
+  color: #fff !important;
+  border: 0 !important;
+}
+
+.footer .social-icon.social-facebook {
+  background-color: #3b5a9a !important;
+}
+
+.footer .social-icon.social-twitter {
+  background-color: #1aa9e1 !important;
+}
+
+.footer .social-icon.social-instagram {
+  background-color: #e4405f !important;
+}
+
+.footer .social-icon.social-linkedin {
+  background-color: #0073b2 !important;
+}
+
+.footer .social-icon.social-youtube {
+  background-color: #c4302b !important;
+}
+
+.footer .social-icon:hover {
+  color: #fff !important;
+  opacity: 0.9;
+}
