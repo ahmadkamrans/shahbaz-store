@@ -734,3 +734,181 @@ ul.nav.product-filter-items .nav-item a,
   -ms-user-select: none !important;
   user-select: none !important;
 }
+
+/* Products page sidebar: ensure visibility on desktop */
+/* Override all mobile sidebar styles on desktop */
+@media (min-width: 992px) {
+  /* Make sidebar visible on desktop - very specific selectors with highest priority */
+  .main-content-wrapper .col-lg-3.sidebar-shop.mobile-sidebar,
+  .row.main-content-wrapper .col-lg-3.sidebar-shop.mobile-sidebar,
+  aside.sidebar-shop.mobile-sidebar.col-lg-3,
+  aside.sidebar-shop.mobile-sidebar.col-lg-3.order-lg-first,
+  .main-content-wrapper aside.sidebar-shop.mobile-sidebar,
+  .row.main-content-wrapper aside.sidebar-shop.mobile-sidebar {
+    display: block !important;
+    position: relative !important;
+    transform: none !important;
+    -webkit-transform: none !important;
+    -moz-transform: none !important;
+    -ms-transform: none !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+    z-index: 1 !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    flex: 0 0 25% !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    top: auto !important;
+    bottom: auto !important;
+    left: auto !important;
+    right: auto !important;
+    background-color: transparent !important;
+    overflow: visible !important;
+    height: auto !important;
+    max-height: none !important;
+  }
+
+  /* Ensure sidebar wrapper and widgets are visible */
+  .sidebar-shop .sidebar-wrapper,
+  aside.sidebar-shop .sidebar-wrapper,
+  .sidebar-shop .widget,
+  aside.sidebar-shop .widget,
+  .sidebar-shop .widget-body,
+  aside.sidebar-shop .widget-body,
+  .sidebar-shop #widget-body-2,
+  aside.sidebar-shop #widget-body-2,
+  .sidebar-shop #widget-body-3,
+  aside.sidebar-shop #widget-body-3 {
+    display: block !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+  }
+
+  /* Ensure collapse sections are shown */
+  .sidebar-shop .collapse.show,
+  aside.sidebar-shop .collapse.show,
+  .sidebar-shop .collapse,
+  aside.sidebar-shop .collapse {
+    display: block !important;
+    visibility: visible !important;
+  }
+
+  /* Ensure price slider container is visible */
+  .sidebar-shop .price-slider-wrapper,
+  aside.sidebar-shop .price-slider-wrapper {
+    display: block !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+    min-height: 40px !important;
+    height: auto !important;
+  }
+
+  /* Price slider styling - React Slider */
+  .price-slider-wrapper {
+    padding: 12px 8px !important;
+    margin: 10px 0 !important;
+    position: relative !important;
+    overflow: visible !important;
+  }
+
+  .price-range-slider {
+    width: 100% !important;
+    height: 16px !important;
+    position: relative !important;
+    margin: 0 !important;
+    display: block !important;
+  }
+
+  /* Base track styling - default gray */
+  .price-range-slider .price-slider-track {
+    height: 16px !important;
+    background: #e0e0e0 !important;
+    border-radius: 8px !important;
+    top: 0 !important;
+    position: absolute !important;
+    margin: 0 !important;
+  }
+
+  /* Unselected tracks - explicitly gray (before and after selected range) */
+  .price-range-slider .price-slider-track.price-slider-track-0,
+  .price-range-slider .price-slider-track.price-slider-track-2 {
+    background: #e0e0e0 !important;
+    height: 16px !important;
+    border-radius: 8px !important;
+    z-index: 0 !important;
+  }
+
+  /* Selected range (middle track) - purple ONLY */
+  .price-range-slider .price-slider-track.price-slider-track-1 {
+    background: #901781 !important;
+    border-radius: 8px !important;
+    height: 16px !important;
+    z-index: 1 !important;
+  }
+
+  .price-slider-thumb {
+    width: 16px !important;
+    height: 16px !important;
+    border-radius: 50% !important;
+    background: #901781 !important;
+    border: 2px solid #fff !important;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2) !important;
+    cursor: pointer !important;
+    top: 50% !important;
+    transform: translateY(-50%) !important;
+    margin-top: 0 !important;
+    outline: none !important;
+    position: absolute !important;
+    box-sizing: border-box !important;
+    z-index: 2 !important;
+    margin-left: -8px !important;
+  }
+
+  .price-slider-thumb:hover {
+    box-shadow: 0 2px 6px rgba(144, 23, 129, 0.4) !important;
+  }
+
+  .price-slider-thumb:active {
+    box-shadow: 0 2px 8px rgba(144, 23, 129, 0.6) !important;
+  }
+
+  .price-slider-thumb:focus {
+    outline: none !important;
+  }
+
+  /* Hide sidebar overlay on desktop */
+  .sidebar-overlay {
+    display: none !important;
+    visibility: hidden !important;
+    opacity: 0 !important;
+  }
+
+  /* Ensure the row displays properly */
+  .main-content-wrapper.row {
+    display: flex !important;
+    flex-wrap: wrap !important;
+    margin-left: 0 !important;
+    margin-right: 0 !important;
+  }
+
+  /* Ensure main content area aligns properly */
+  .main-content-wrapper .col-lg-9 {
+    padding-left: 15px !important;
+    padding-right: 15px !important;
+    flex: 0 0 75% !important;
+    max-width: 75% !important;
+  }
+
+  /* Ensure sidebar has proper padding */
+  .main-content-wrapper .col-lg-3.sidebar-shop {
+    padding-left: 15px !important;
+    padding-right: 15px !important;
+  }
+
+  /* Ensure toolbox aligns with content */
+  .main-content-wrapper .toolbox {
+    margin-left: 0 !important;
+    padding-left: 0 !important;
+  }
+}

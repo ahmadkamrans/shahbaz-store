@@ -9,7 +9,11 @@ export async function GET(
   { params }: { params: { path: string[] } }
 ) {
   const path = params.path.join('/');
-  const token = (await cookies()).get('adminToken')?.value;
+  // Try to get token from cookie first, then from Authorization header
+  const cookieToken = (await cookies()).get('adminToken')?.value;
+  const authHeader = request.headers.get('authorization');
+  const headerToken = authHeader?.startsWith('Bearer ') ? authHeader.split(' ')[1] : null;
+  const token = cookieToken || headerToken;
 
   if (!token) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -48,7 +52,11 @@ export async function POST(
   { params }: { params: { path: string[] } }
 ) {
   const path = params.path.join('/');
-  const token = (await cookies()).get('adminToken')?.value;
+  // Try to get token from cookie first, then from Authorization header
+  const cookieToken = (await cookies()).get('adminToken')?.value;
+  const authHeader = request.headers.get('authorization');
+  const headerToken = authHeader?.startsWith('Bearer ') ? authHeader.split(' ')[1] : null;
+  const token = cookieToken || headerToken;
 
   if (!token) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -87,7 +95,11 @@ export async function PUT(
   { params }: { params: { path: string[] } }
 ) {
   const path = params.path.join('/');
-  const token = (await cookies()).get('adminToken')?.value;
+  // Try to get token from cookie first, then from Authorization header
+  const cookieToken = (await cookies()).get('adminToken')?.value;
+  const authHeader = request.headers.get('authorization');
+  const headerToken = authHeader?.startsWith('Bearer ') ? authHeader.split(' ')[1] : null;
+  const token = cookieToken || headerToken;
 
   if (!token) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -126,7 +138,11 @@ export async function DELETE(
   { params }: { params: { path: string[] } }
 ) {
   const path = params.path.join('/');
-  const token = (await cookies()).get('adminToken')?.value;
+  // Try to get token from cookie first, then from Authorization header
+  const cookieToken = (await cookies()).get('adminToken')?.value;
+  const authHeader = request.headers.get('authorization');
+  const headerToken = authHeader?.startsWith('Bearer ') ? authHeader.split(' ')[1] : null;
+  const token = cookieToken || headerToken;
 
   if (!token) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });

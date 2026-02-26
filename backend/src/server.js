@@ -47,42 +47,10 @@ if (process.env.ELASTICSEARCH_ENABLED === 'true') {
 
 const app = express();
 
-// Middleware
-// CORS configuration - allow all origins (including ngrok and other machines)
-// Explicitly allows localhost:3001 and other common development ports
+// CORS must be the FIRST middleware to handle preflight requests before ngrok intercepts them
+// CORS configuration - allow all origins (for development with ngrok and cross-machine access)
 const corsOptions = {
-  origin: function (origin, callback) {
-    // Allow requests with no origin (like mobile apps, Postman, or curl)
-    if (!origin) {
-      return callback(null, true);
-    }
-    
-    // Normalize origin (remove trailing slash and convert to lowercase for comparison)
-    const normalizedOrigin = origin.replace(/\/$/, '').toLowerCase();
-    
-    // Explicitly allow common localhost ports (case-insensitive)
-    const allowedOrigins = [
-      'http://localhost:3000',
-      'http://localhost:3001',
-      'http://127.0.0.1:3000',
-      'http://127.0.0.1:3001',
-    ].map(o => o.toLowerCase());
-    
-    // Check if normalized origin matches allowed origins
-    if (allowedOrigins.includes(normalizedOrigin)) {
-      return callback(null, true);
-    }
-    
-    // Allow ngrok URLs, localhost, or 127.0.0.1 in any form
-    if (normalizedOrigin.includes('ngrok') || 
-        normalizedOrigin.includes('localhost') || 
-        normalizedOrigin.includes('127.0.0.1')) {
-      return callback(null, true);
-    }
-    
-    // Allow all other origins as well (for flexibility in development)
-    callback(null, true);
-  },
+  origin: true, // Allow all origins - simplifies configuration for development
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
   allowedHeaders: [
@@ -101,10 +69,32 @@ const corsOptions = {
   optionsSuccessStatus: 204,
 };
 
+// Apply CORS middleware FIRST - before any other middleware
 app.use(cors(corsOptions));
 
-// Handle preflight requests explicitly (fallback)
-app.options('*', cors(corsOptions));
+// Handle ALL preflight OPTIONS requests explicitly and immediately
+// This must happen before ngrok can intercept the request
+app.options('*', (req, res) => {
+  // Set CORS headers explicitly for preflight
+  const origin = req.headers.origin || '*';
+  res.header('Access-Control-Allow-Origin', origin);
+  res.header('Access-Control-Allow-Credentials', 'true');
+  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, PATCH, OPTIONS');
+  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, ngrok-skip-browser-warning, X-Requested-With, Accept, Origin, Referer, Access-Control-Request-Method, Access-Control-Request-Headers');
+  res.header('Access-Control-Max-Age', '86400'); // 24 hours
+  return res.status(204).end();
+});
+
+// Additional CORS headers for all requests (backup)
+app.use((req, res, next) => {
+  // Set CORS headers explicitly for all responses
+  const origin = req.headers.origin || '*';
+  res.header('Access-Control-Allow-Origin', origin);
+  res.header('Access-Control-Allow-Credentials', 'true');
+  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, PATCH, OPTIONS');
+  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, ngrok-skip-browser-warning, X-Requested-With, Accept, Origin, Referer, Access-Control-Request-Method, Access-Control-Request-Headers');
+  next();
+});
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));

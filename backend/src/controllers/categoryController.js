@@ -73,11 +73,6 @@ export const createCategory = async (req, res, next) => {
         throw new AppError('Parent category is not active', 400);
       }
       
-      // Prevent nesting more than 2 levels deep
-      if (parentCategory.parent) {
-        throw new AppError('Cannot nest categories more than 2 levels deep', 400);
-      }
-      
       categoryData.parent = parent;
     } else {
       categoryData.parent = null;
@@ -137,18 +132,42 @@ export const updateCategory = async (req, res, next) => {
           throw new AppError('Parent category is not active', 400);
         }
         
-        // Prevent nesting more than 2 levels deep
-        if (parentCategory.parent) {
-          throw new AppError('Cannot nest categories more than 2 levels deep', 400);
-        }
+        // Prevent circular reference: check if parent is a descendant of this category
+        const checkCircularReference = async (categoryId, potentialParentId) => {
+          // If trying to set the category as its own parent, that's a circular reference
+          if (categoryId === potentialParentId) {
+            return true;
+          }
+          
+          // Traverse up the parent chain to see if we encounter the category being updated
+          let currentParentId = potentialParentId;
+          const visited = new Set();
+          
+          while (currentParentId) {
+            // If we find the category being updated in the parent chain, it's circular
+            if (currentParentId === categoryId) {
+              return true;
+            }
+            
+            // Prevent infinite loops
+            if (visited.has(currentParentId)) {
+              break;
+            }
+            visited.add(currentParentId);
+            
+            const parentCat = await Category.findById(currentParentId);
+            if (!parentCat || !parentCat.parent) {
+              break;
+            }
+            currentParentId = parentCat.parent.toString();
+          }
+          
+          return false;
+        };
         
-        // Prevent setting a child category as parent
-        const isDescendant = await Category.findOne({ 
-          parent: req.params.id,
-          _id: parent 
-        });
-        if (isDescendant) {
-          throw new AppError('Cannot set a child category as parent', 400);
+        const isCircular = await checkCircularReference(req.params.id, parent);
+        if (isCircular) {
+          throw new AppError('Cannot set a descendant category as parent (circular reference)', 400);
         }
         
         updateData.parent = parent;

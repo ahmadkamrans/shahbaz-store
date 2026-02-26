@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
+import ReactSlider from "react-slider";
 import { ProductGrid } from "@/components/product/ProductGrid";
 import { Product } from "@/types";
 import { productsApi } from "@/lib/api/products";
@@ -12,71 +13,12 @@ import { categoriesApi } from "@/lib/api/categories";
 import { Category } from "@/types";
 import { useWishlist } from "@/lib/store/wishlist-store";
 
-// Fallback products when API fails or returns empty (e.g. backend not running)
-const FALLBACK_PRODUCTS: Product[] = [
-  {
-    id: "1",
-    name: "Sample Product 1",
-    slug: "sample-product-1",
-    price: 49,
-    image: "/assets/images/products/product-1.jpg",
-    category: "Uncategorized",
-    rating: 4,
-  },
-  {
-    id: "2",
-    name: "Sample Product 2",
-    slug: "sample-product-2",
-    price: 59,
-    image: "/assets/images/products/product-2.jpg",
-    category: "Uncategorized",
-    rating: 5,
-  },
-  {
-    id: "3",
-    name: "Sample Product 3",
-    slug: "sample-product-3",
-    price: 39,
-    image: "/assets/images/products/product-3.jpg",
-    category: "Uncategorized",
-    rating: 4,
-  },
-  {
-    id: "4",
-    name: "Sample Product 4",
-    slug: "sample-product-4",
-    price: 69,
-    image: "/assets/images/products/product-4.jpg",
-    category: "Uncategorized",
-    rating: 3,
-  },
-  {
-    id: "5",
-    name: "Sample Product 5",
-    slug: "sample-product-5",
-    price: 45,
-    image: "/assets/images/products/product-5.jpg",
-    category: "Uncategorized",
-    rating: 5,
-  },
-  {
-    id: "6",
-    name: "Sample Product 6",
-    slug: "sample-product-6",
-    price: 55,
-    image: "/assets/images/products/product-6.jpg",
-    category: "Uncategorized",
-    rating: 4,
-  },
-];
-
 export default function ProductsPage() {
   const searchParams = useSearchParams();
   const { fetchWishlist } = useWishlist();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [sortBy, setSortBy] = useState("menu_order");
   const [products, setProducts] = useState<Product[]>([]);
-  const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
   const [apiFailed, setApiFailed] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<string>("");
@@ -87,8 +29,9 @@ export default function ProductsPage() {
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [minPrice, setMinPrice] = useState(0);
   const [maxPrice, setMaxPrice] = useState(1000);
-  const [selectedSizes, setSelectedSizes] = useState<string[]>([]);
-  const [selectedColors, setSelectedColors] = useState<string[]>([]);
+  const [topLevelCategories, setTopLevelCategories] = useState<Category[]>([]);
+  const [categoryChildren, setCategoryChildren] = useState<Record<string, Category[]>>({});
+  const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set());
 
   // Fetch wishlist on mount
   useEffect(() => {
@@ -116,17 +59,126 @@ export default function ProductsPage() {
     }
   }, [searchParams]);
 
+  // Fetch top-level categories on mount
+  useEffect(() => {
+    const fetchTopLevelCategories = async () => {
+      try {
+        console.log("Fetching top-level categories...");
+        const cats = await categoriesApi.getCategories(null);
+        console.log("Categories received:", cats);
+        const categoriesArray = Array.isArray(cats) ? cats : [];
+        console.log("Setting topLevelCategories:", categoriesArray);
+        setTopLevelCategories(categoriesArray);
+      } catch (error) {
+        console.error("Failed to fetch categories:", error);
+        setTopLevelCategories([]);
+      }
+    };
+    fetchTopLevelCategories();
+  }, []);
+
+  // Debug: Log when topLevelCategories changes
+  useEffect(() => {
+    console.log("topLevelCategories state updated:", topLevelCategories);
+  }, [topLevelCategories]);
+
+  // Fetch sub-categories when a category is expanded (recursive support)
+  const fetchSubCategories = async (categoryId: string) => {
+    if (categoryChildren[categoryId]) {
+      // Already fetched
+      return;
+    }
+    try {
+      const subCats = await categoriesApi.getCategories(categoryId).catch(() => []);
+      setCategoryChildren((prev) => ({
+        ...prev,
+        [categoryId]: Array.isArray(subCats) ? subCats : [],
+      }));
+    } catch (error) {
+      console.error(`Failed to fetch sub-categories for ${categoryId}:`, error);
+    }
+  };
+
+  // Toggle category expansion
+  const toggleCategory = (categoryId: string) => {
+    const newExpanded = new Set(expandedCategories);
+    if (newExpanded.has(categoryId)) {
+      newExpanded.delete(categoryId);
+    } else {
+      newExpanded.add(categoryId);
+      fetchSubCategories(categoryId);
+    }
+    setExpandedCategories(newExpanded);
+  };
+
+  // Recursive category item component
+  const CategoryItem = ({ category, level = 0 }: { category: Category; level?: number }) => {
+    const subCategories = categoryChildren[category.id] || [];
+    const hasChildren = subCategories.length > 0;
+    const isExpanded = expandedCategories.has(category.id);
+    const hasCheckedForChildren = categoryChildren.hasOwnProperty(category.id);
+    const marginLeft = level * 20;
+
+    return (
+      <li>
+        <div className="d-flex align-items-center">
+          <button
+            type="button"
+            className="category-toggle me-2"
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              toggleCategory(category.id);
+            }}
+            style={{
+              background: "none",
+              border: "none",
+              padding: "0",
+              cursor: "pointer",
+              fontSize: "12px",
+              width: "20px",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              opacity: hasCheckedForChildren && !hasChildren ? 0.3 : 1,
+            }}
+            disabled={hasCheckedForChildren && !hasChildren}
+          >
+            <i className={`icon-angle-${isExpanded ? "down" : "right"}`}></i>
+          </button>
+          <a
+            href="#"
+            className={selectedCategory === category.id ? "active" : ""}
+            onClick={(e) => {
+              e.preventDefault();
+              setSelectedCategory(category.id);
+              setPage(1);
+            }}
+            style={{ flex: 1 }}
+          >
+            {category.name}
+          </a>
+        </div>
+        {isExpanded && hasChildren && (
+          <ul className="cat-list" style={{ marginLeft: `${marginLeft + 20}px`, marginTop: "5px" }}>
+            {subCategories.map((subCat) => (
+              <CategoryItem key={subCat.id} category={subCat} level={level + 1} />
+            ))}
+          </ul>
+        )}
+      </li>
+    );
+  };
+
   useEffect(() => {
     const fetchData = async () => {
       try {
         setLoading(true);
         setApiFailed(false);
-        const cats = await categoriesApi.getCategories().catch(() => []);
-        setCategories(Array.isArray(cats) ? cats : []);
 
         const sortMap: Record<
           string,
-          { sortBy?: string; sortOrder?: "asc" | "desc" }
+          { sortBy?: "createdAt" | "name" | "price" | "averageRating" | "viewCount"; sortOrder?: "asc" | "desc" }
         > = {
           menu_order: {},
           default: {},
@@ -144,22 +196,17 @@ export default function ProductsPage() {
           page,
           limit: itemsPerPage,
           minPrice: minPrice > 0 ? minPrice : undefined,
-          maxPrice: maxPrice < 1000 ? maxPrice : undefined,
+          maxPrice: maxPrice > 0 && maxPrice < 10000 ? maxPrice : undefined,
           ...sortParams,
         });
 
         const list = response?.products ?? [];
-        if (list.length > 0) {
-          setProducts(list);
-          setTotalPages(response.totalPages ?? 1);
-        } else {
-          setProducts(FALLBACK_PRODUCTS);
-          setTotalPages(1);
-          setApiFailed(true);
-        }
+        setProducts(list);
+        setTotalPages(response.totalPages ?? 1);
+        setApiFailed(list.length === 0);
       } catch (error) {
         console.error("Failed to fetch products:", error);
-        setProducts(FALLBACK_PRODUCTS);
+        setProducts([]);
         setTotalPages(1);
         setApiFailed(true);
       } finally {
@@ -179,6 +226,43 @@ export default function ProductsPage() {
   ]);
 
   return (
+    <>
+      <style dangerouslySetInnerHTML={{__html: `
+        @media (min-width: 992px) {
+          .sidebar-shop.mobile-sidebar {
+            display: block !important;
+            position: relative !important;
+            transform: none !important;
+            visibility: visible !important;
+            opacity: 1 !important;
+            z-index: 1 !important;
+            width: 100% !important;
+            padding: 0 !important;
+            margin: 0 !important;
+            top: auto !important;
+            bottom: auto !important;
+            left: auto !important;
+            right: auto !important;
+            background-color: transparent !important;
+            overflow: visible !important;
+          }
+          .sidebar-shop .sidebar-wrapper,
+          .sidebar-shop .widget,
+          .sidebar-shop .widget-body,
+          .sidebar-shop #widget-body-2,
+          .sidebar-shop #widget-body-3 {
+            display: block !important;
+            visibility: visible !important;
+            opacity: 1 !important;
+          }
+          .sidebar-shop .price-slider-wrapper {
+            display: block !important;
+            visibility: visible !important;
+            opacity: 1 !important;
+            min-height: 40px !important;
+          }
+        }
+      `}} />
     <main className="main">
       <div className="category-banner-container bg-gray">
         <div
@@ -238,7 +322,8 @@ export default function ProductsPage() {
                   <Link href="/products">Products</Link>
                 </li>
                 <li className="breadcrumb-item active" aria-current="page">
-                  {categories.find((c) => c.id === selectedCategory)?.name ||
+                  {topLevelCategories.find((c) => c.id === selectedCategory)?.name ||
+                    Object.values(categoryChildren).flat().find((c) => c.id === selectedCategory)?.name ||
                     "Category"}
                 </li>
               </>
@@ -263,6 +348,162 @@ export default function ProductsPage() {
         )}
 
         <div className="row main-content-wrapper mb-2 pb-2">
+          <aside
+            className={`sidebar-shop col-lg-3 order-lg-first mobile-sidebar ${sidebarOpen ? "sidebar-opened" : ""}`}
+            style={{ 
+              display: "block",
+              position: "relative",
+              visibility: "visible",
+              opacity: 1,
+              transform: "none",
+              zIndex: 1
+            }}
+          >
+            <div className="sidebar-wrapper">
+              <div className="widget">
+                <h3 className="widget-title">
+                  <a
+                    href="#widget-body-2"
+                    role="button"
+                    aria-expanded="true"
+                    aria-controls="widget-body-2"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      const target = document.getElementById("widget-body-2");
+                      if (target) {
+                        target.classList.toggle("show");
+                      }
+                    }}
+                  >
+                    Categories
+                  </a>
+                </h3>
+                <div className="collapse show" id="widget-body-2" style={{ display: "block" }}>
+                  <div className="widget-body">
+                    <ul className="cat-list">
+                      <li>
+                        <a
+                          href="#"
+                          className={selectedCategory === "" ? "active" : ""}
+                          onClick={(e) => {
+                            e.preventDefault();
+                            setSelectedCategory("");
+                            setPage(1);
+                          }}
+                        >
+                          All
+                        </a>
+                      </li>
+                      {topLevelCategories.length === 0 ? (
+                        <li>
+                          <span style={{ color: "#999", fontStyle: "italic" }}>
+                            No categories available
+                          </span>
+                        </li>
+                      ) : (
+                        topLevelCategories.map((cat) => (
+                          <CategoryItem key={cat.id} category={cat} level={0} />
+                        ))
+                      )}
+                    </ul>
+                  </div>
+                </div>
+              </div>
+
+              <div className="widget widget-price">
+                <h3 className="widget-title">
+                  <a
+                    href="#widget-body-3"
+                    role="button"
+                    aria-expanded="true"
+                    aria-controls="widget-body-3"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      const target = document.getElementById("widget-body-3");
+                      if (target) {
+                        target.classList.toggle("show");
+                      }
+                    }}
+                  >
+                    Filter By Price
+                  </a>
+                </h3>
+                <div className="collapse show" id="widget-body-3" style={{ display: "block" }}>
+                  <div className="widget-body">
+                    <form
+                      onSubmit={(e) => {
+                        e.preventDefault();
+                        setPage(1);
+                      }}
+                    >
+                      <div className="price-slider-wrapper" style={{ marginBottom: "15px" }}>
+                        <ReactSlider
+                          className="price-range-slider"
+                          thumbClassName="price-slider-thumb"
+                          trackClassName="price-slider-track"
+                          value={[minPrice, maxPrice]}
+                          onChange={(values: number[]) => {
+                            setMinPrice(values[0]);
+                            setMaxPrice(values[1]);
+                            setPage(1);
+                          }}
+                          min={0}
+                          max={10000}
+                          step={1}
+                          pearling
+                          minDistance={10}
+                        />
+                      </div>
+                      <div className="filter-price-action d-flex align-items-center justify-content-between flex-wrap pb-0">
+                        <div className="filter-price-text mb-1 mb-xl-0">
+                          Price:{" "}
+                          <span id="filter-price-range" className="mr-3">
+                            ${minPrice} - ${maxPrice}
+                          </span>
+                        </div>
+                        <div className="d-flex gap-2 mb-2">
+                          <input
+                            type="number"
+                            className="form-control form-control-sm"
+                            placeholder="Min"
+                            value={minPrice}
+                            onChange={(e) => {
+                              setMinPrice(
+                                Math.max(0, Number(e.target.value) || 0),
+                              );
+                              setPage(1);
+                            }}
+                            min={0}
+                          />
+                          <input
+                            type="number"
+                            className="form-control form-control-sm"
+                            placeholder="Max"
+                            value={maxPrice}
+                            onChange={(e) => {
+                              setMaxPrice(
+                                Math.min(10000, Number(e.target.value) || 1000),
+                              );
+                              setPage(1);
+                            }}
+                            min={0}
+                            max={10000}
+                          />
+                        </div>
+                        <button
+                          type="submit"
+                          className="btn btn-primary font2 mb-1 mb-xl-0"
+                        >
+                          Filter
+                        </button>
+                      </div>
+                    </form>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </aside>
+
           <div className="col-lg-9">
             <nav
               className="toolbox sticky-header"
@@ -407,12 +648,6 @@ export default function ProductsPage() {
               </div>
             </nav>
 
-            {apiFailed && (
-              <div className="alert alert-info mb-3" role="alert">
-                Could not load products from the server. Showing sample
-                products. Start the backend and refresh to load real data.
-              </div>
-            )}
             <div className="row products-body">
               {loading ? (
                 <div className="col-12 text-center py-5">
@@ -505,231 +740,15 @@ export default function ProductsPage() {
               </ul>
             </nav>
           </div>
-
-          <div
-            className="sidebar-overlay"
-            onClick={() => setSidebarOpen(false)}
-            aria-hidden="true"
-          />
-
-          <aside
-            className={`sidebar-shop col-lg-3 order-lg-first mobile-sidebar ${sidebarOpen ? "sidebar-opened" : ""}`}
-          >
-            <div className="sidebar-wrapper">
-              <div className="widget">
-                <h3 className="widget-title">
-                  <a
-                    data-toggle="collapse"
-                    href="#widget-body-2"
-                    role="button"
-                    aria-expanded="true"
-                    aria-controls="widget-body-2"
-                  >
-                    Categories
-                  </a>
-                </h3>
-                <div className="collapse show" id="widget-body-2">
-                  <div className="widget-body">
-                    <ul className="cat-list">
-                      <li>
-                        <a
-                          href="#"
-                          onClick={(e) => {
-                            e.preventDefault();
-                            setSelectedCategory("");
-                            setPage(1);
-                          }}
-                        >
-                          All
-                        </a>
-                      </li>
-                      {categories.map((cat) => (
-                        <li key={cat.id}>
-                          <a
-                            href="#"
-                            className={
-                              selectedCategory === cat.id ? "active" : ""
-                            }
-                            onClick={(e) => {
-                              e.preventDefault();
-                              setSelectedCategory(cat.id);
-                              setPage(1);
-                            }}
-                          >
-                            {cat.name}
-                          </a>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                </div>
-              </div>
-
-              <div className="widget widget-price">
-                <h3 className="widget-title">
-                  <a
-                    data-toggle="collapse"
-                    href="#widget-body-3"
-                    role="button"
-                    aria-expanded="true"
-                    aria-controls="widget-body-3"
-                  >
-                    Filter By Price
-                  </a>
-                </h3>
-                <div className="collapse show" id="widget-body-3">
-                  <div className="widget-body">
-                    <form
-                      onSubmit={(e) => {
-                        e.preventDefault();
-                        setPage(1);
-                      }}
-                    >
-                      <div className="price-slider-wrapper">
-                        <div id="price-slider" />
-                      </div>
-                      <div className="filter-price-action d-flex align-items-center justify-content-between flex-wrap pb-0">
-                        <div className="filter-price-text mb-1 mb-xl-0">
-                          Price:{" "}
-                          <span id="filter-price-range" className="mr-3">
-                            ${minPrice} - ${maxPrice}
-                          </span>
-                        </div>
-                        <div className="d-flex gap-2 mb-2">
-                          <input
-                            type="number"
-                            className="form-control form-control-sm"
-                            placeholder="Min"
-                            value={minPrice}
-                            onChange={(e) => {
-                              setMinPrice(
-                                Math.max(0, Number(e.target.value) || 0),
-                              );
-                              setPage(1);
-                            }}
-                            min={0}
-                          />
-                          <input
-                            type="number"
-                            className="form-control form-control-sm"
-                            placeholder="Max"
-                            value={maxPrice}
-                            onChange={(e) => {
-                              setMaxPrice(
-                                Math.min(10000, Number(e.target.value) || 1000),
-                              );
-                              setPage(1);
-                            }}
-                            min={0}
-                            max={10000}
-                          />
-                        </div>
-                        <button
-                          type="submit"
-                          className="btn btn-primary font2 mb-1 mb-xl-0"
-                        >
-                          Filter
-                        </button>
-                      </div>
-                    </form>
-                  </div>
-                </div>
-              </div>
-
-              <div className="widget widget-size">
-                <h3 className="widget-title">
-                  <a
-                    data-toggle="collapse"
-                    href="#widget-body-5"
-                    role="button"
-                    aria-expanded="true"
-                    aria-controls="widget-body-5"
-                  >
-                    Sizes
-                  </a>
-                </h3>
-                <div className="collapse show" id="widget-body-5">
-                  <div className="widget-body">
-                    <ul className="cat-list">
-                      {["L", "M", "S", "X"].map((size) => (
-                        <li key={size}>
-                          <a
-                            href="#"
-                            className={
-                              selectedSizes.includes(size) ? "active" : ""
-                            }
-                            onClick={(e) => {
-                              e.preventDefault();
-                              setSelectedSizes((prev) =>
-                                prev.includes(size)
-                                  ? prev.filter((s) => s !== size)
-                                  : [...prev, size],
-                              );
-                              setPage(1);
-                            }}
-                          >
-                            {size}
-                          </a>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                </div>
-              </div>
-
-              <div className="widget widget-color">
-                <h3 className="widget-title">
-                  <a
-                    data-toggle="collapse"
-                    href="#widget-body-6"
-                    role="button"
-                    aria-expanded="true"
-                    aria-controls="widget-body-6"
-                  >
-                    Color
-                  </a>
-                </h3>
-                <div className="collapse show" id="widget-body-6">
-                  <div className="widget-body">
-                    <ul className="config-swatch-list flex-column">
-                      {[
-                        { name: "Indigo", color: "#6085a5" },
-                        { name: "Black", color: "#333" },
-                        { name: "Blue", color: "#0188cc" },
-                      ].map((color) => (
-                        <li key={color.name}>
-                          <a
-                            href="#"
-                            className={
-                              selectedColors.includes(color.name)
-                                ? "active"
-                                : ""
-                            }
-                            style={{ backgroundColor: color.color }}
-                            onClick={(e) => {
-                              e.preventDefault();
-                              setSelectedColors((prev) =>
-                                prev.includes(color.name)
-                                  ? prev.filter((c) => c !== color.name)
-                                  : [...prev, color.name],
-                              );
-                              setPage(1);
-                            }}
-                            title={color.name}
-                          >
-                            <span />
-                          </a>
-                          <span>{color.name}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </aside>
         </div>
+
+        <div
+          className="sidebar-overlay"
+          onClick={() => setSidebarOpen(false)}
+          aria-hidden="true"
+        />
       </div>
     </main>
+    </>
   );
 }

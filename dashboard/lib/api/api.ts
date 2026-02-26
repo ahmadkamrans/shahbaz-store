@@ -6,6 +6,7 @@ const api = axios.create({
   baseURL: API_URL,
   headers: {
     'Content-Type': 'application/json',
+    'ngrok-skip-browser-warning': 'true',
   },
 });
 
@@ -30,10 +31,23 @@ api.interceptors.request.use(
   }
 );
 
-// Handle token expiration
+// Handle token expiration and HTML responses (ngrok warnings)
 api.interceptors.response.use(
-  (response) => response,
+  (response) => {
+    // Check if response is HTML (ngrok warning page)
+    if (typeof response.data === 'string' && response.data.includes('<!DOCTYPE html>')) {
+      console.error('API returned HTML instead of JSON. This might be an ngrok warning page.');
+      return Promise.reject(new Error('Invalid response: received HTML instead of JSON. Check ngrok configuration.'));
+    }
+    return response;
+  },
   (error) => {
+    // Check if error response is HTML
+    if (error.response && typeof error.response.data === 'string' && error.response.data.includes('<!DOCTYPE html>')) {
+      console.error('API error response is HTML. This might be an ngrok warning page.');
+      return Promise.reject(new Error('Invalid response: received HTML instead of JSON. Check ngrok configuration.'));
+    }
+    
     if (error.response?.status === 401) {
       // Only access localStorage and window on client side
       if (typeof window !== 'undefined') {

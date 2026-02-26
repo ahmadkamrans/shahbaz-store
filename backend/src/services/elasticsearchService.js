@@ -237,9 +237,30 @@ export const searchProducts = async (searchParams) => {
       });
     }
 
-    // Category filter
+    // Category filter - include child categories
     if (category) {
-      filterQueries.push({ term: { 'category.id': category } });
+      // Get all descendant category IDs (including the category itself)
+      const Category = (await import('../models/Category.js')).default;
+      const getAllDescendantIds = async (categoryId) => {
+        const categoryIds = [categoryId.toString()];
+        const getChildren = async (parentId) => {
+          const children = await Category.find({ 
+            parent: parentId,
+            isActive: true 
+          }).select('_id').lean();
+          
+          for (const child of children) {
+            categoryIds.push(child._id.toString());
+            await getChildren(child._id); // Recursively get nested children
+          }
+        };
+        
+        await getChildren(categoryId);
+        return categoryIds;
+      };
+      
+      const categoryIds = await getAllDescendantIds(category);
+      filterQueries.push({ terms: { 'category.id': categoryIds } });
     }
 
     // Price range filter

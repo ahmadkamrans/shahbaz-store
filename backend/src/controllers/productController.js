@@ -98,7 +98,33 @@ export const getProducts = async (req, res, next) => {
       const query = { isActive: true };
 
       if (category) {
-        query.category = category;
+        // Get all descendant category IDs (including the category itself)
+        const Category = (await import('../models/Category.js')).default;
+        const getAllDescendantIds = async (categoryId) => {
+          const categoryIds = [categoryId];
+          const getChildren = async (parentId) => {
+            const children = await Category.find({ 
+              parent: parentId,
+              isActive: true 
+            }).select('_id').lean();
+            
+            for (const child of children) {
+              categoryIds.push(child._id);
+              await getChildren(child._id); // Recursively get nested children
+            }
+          };
+          
+          await getChildren(categoryId);
+          return categoryIds;
+        };
+        
+        const categoryIds = await getAllDescendantIds(category);
+        // If we have multiple categories, use $in, otherwise use direct match
+        if (categoryIds.length > 1) {
+          query.category = { $in: categoryIds };
+        } else {
+          query.category = categoryIds[0];
+        }
       }
 
       if (featured === 'true') query.featured = true;
@@ -207,7 +233,7 @@ export const getProduct = async (req, res, next) => {
       isActive: true
     })
       .populate('category', 'name slug')
-      .populate('relatedProducts', 'name slug price images averageRating');
+      .populate('relatedProducts', 'name slug price images averageRating sku');
 
     if (!product) {
       throw new AppError('Product not found', 404);
@@ -580,7 +606,7 @@ export const getRelatedProducts = async (req, res, next) => {
         isActive: true
       })
         .limit(8)
-        .select('name slug price images averageRating');
+        .select('name slug price images averageRating sku');
     }
 
     // If not enough, get from same category
@@ -591,7 +617,7 @@ export const getRelatedProducts = async (req, res, next) => {
         isActive: true
       })
         .limit(8 - related.length)
-        .select('name slug price images averageRating');
+        .select('name slug price images averageRating sku');
       
       related = [...related, ...sameCategory];
     }
@@ -610,7 +636,7 @@ export const getPopularProducts = async (req, res, next) => {
     const products = await Product.find({ isActive: true })
       .sort({ viewCount: -1, averageRating: -1 })
       .limit(10)
-      .select('name slug price images averageRating viewCount');
+      .select('name slug price images averageRating viewCount sku');
 
     res.json({
       success: true,
@@ -682,7 +708,7 @@ export const getProductsForComparison = async (req, res, next) => {
       isActive: true
     })
       .populate('category', 'name')
-      .select('name description price images averageRating stock variants tags');
+      .select('name description price images averageRating stock variants tags sku');
 
     res.json({
       success: true,

@@ -368,10 +368,31 @@ export default function ProductsClient({
         : `${BACKEND_BASE_URL}/${imgPath}`;
     };
     
+    // Helper to normalize image paths for comparison (remove domain, ensure leading slash)
+    const normalizeImagePath = (imgPath: string | undefined): string => {
+      if (!imgPath) return '';
+      // Remove protocol and domain
+      let normalized = imgPath.replace(/^https?:\/\/[^/]+/, '');
+      // Ensure leading slash
+      if (!normalized.startsWith('/')) {
+        normalized = '/' + normalized;
+      }
+      return normalized;
+    };
+    
     // Combine main image with images array if main image exists and isn't in array
+    // Normalize paths to avoid duplicates
     const allProductImages = [...(product.images || [])];
-    const mainImagePath = product.image?.replace(/^https?:\/\/[^/]+/, '') || product.image || '';
-    if (mainImagePath && !allProductImages.includes(mainImagePath)) {
+    const mainImagePath = normalizeImagePath(product.image);
+    
+    // Check if main image is already in the images array (using normalized paths)
+    const mainImageInArray = mainImagePath && allProductImages.some(img => 
+      normalizeImagePath(img) === mainImagePath
+    );
+    
+    // Only add main image if it's not already in the array
+    // Use the normalized path (without domain) for consistency
+    if (mainImagePath && !mainImageInArray) {
       allProductImages.unshift(mainImagePath);
     }
     
@@ -381,7 +402,7 @@ export default function ProductsClient({
       price: product.price,
       oldPrice: product.oldPrice?.toString() || "",
       // Store the path (not full URL) for saving, but display will use full URL
-      images: allProductImages.map(img => img?.replace(/^https?:\/\/[^/]+/, '') || img),
+      images: allProductImages.map(img => normalizeImagePath(img)),
       category: categoryId || "",
       description: product.description || "",
       shortDescription: product.shortDescription || "",

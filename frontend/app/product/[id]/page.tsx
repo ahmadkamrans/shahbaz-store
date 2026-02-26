@@ -841,7 +841,20 @@ export default function ProductDetailPage() {
                   }}
                   style={{ cursor: 'pointer', userSelect: 'none' }}
                 >
-                  Description
+                  DESCRIPTION
+                </a>
+              </li>
+              <li className="nav-item">
+                <a
+                  href="#"
+                  className={`nav-link ${activeTab === 'additional' ? 'active' : ''}`}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    setActiveTab('additional');
+                  }}
+                  style={{ cursor: 'pointer', userSelect: 'none' }}
+                >
+                  ADDITIONAL INFORMATION
                 </a>
               </li>
               <li className="nav-item">
@@ -854,7 +867,7 @@ export default function ProductDetailPage() {
                   }}
                   style={{ cursor: 'pointer', userSelect: 'none' }}
                 >
-                  Reviews ({reviews.length})
+                  REVIEWS ({reviews.length})
                 </a>
               </li>
             </ul>
@@ -865,6 +878,49 @@ export default function ProductDetailPage() {
               >
                 <div className="product-desc-content">
                   <p>{product.description}</p>
+                </div>
+              </div>
+              <div className={`tab-pane fade ${activeTab === 'additional' ? 'show active' : ''}`}>
+                <div className="product-additional-info">
+                  <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                    <tbody>
+                      {product.categoryInfo && (
+                        <tr>
+                          <td style={{ fontWeight: 600, width: '30%', padding: '12px 15px', borderBottom: '1px solid #e0e0e0', color: '#333' }}>Category</td>
+                          <td style={{ padding: '12px 15px', borderBottom: '1px solid #e0e0e0', color: '#666' }}>
+                            <Link href={`/products?category=${product.categoryInfo.id}`} style={{ color: '#666', textDecoration: 'none' }}>
+                              {product.categoryInfo.name}
+                            </Link>
+                          </td>
+                        </tr>
+                      )}
+                      {product.variants && product.variants.length > 0 && (() => {
+                        // Group variants by type (Color, Size, etc.)
+                        const variantGroups: Record<string, Set<string>> = {};
+                        product.variants.forEach((v: any) => {
+                          if (v.attributes) {
+                            Object.entries(v.attributes).forEach(([key, value]) => {
+                              if (!variantGroups[key]) {
+                                variantGroups[key] = new Set();
+                              }
+                              variantGroups[key].add(value as string);
+                            });
+                          }
+                        });
+
+                        return Object.entries(variantGroups).map(([type, values]) => (
+                          <tr key={type}>
+                            <td style={{ fontWeight: 600, width: '30%', padding: '12px 15px', borderBottom: '1px solid #e0e0e0', color: '#333' }}>
+                              {type.charAt(0).toUpperCase() + type.slice(1)}
+                            </td>
+                            <td style={{ padding: '12px 15px', borderBottom: '1px solid #e0e0e0', color: '#666' }}>
+                              {Array.from(values).join(', ')}
+                            </td>
+                          </tr>
+                        ));
+                      })()}
+                    </tbody>
+                  </table>
                 </div>
               </div>
               <div className={`tab-pane fade ${activeTab === 'reviews' ? 'show active' : ''}`}>

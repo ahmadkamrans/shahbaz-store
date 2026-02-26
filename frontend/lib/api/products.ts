@@ -88,6 +88,11 @@ export const transformProduct = (product: BackendProduct): Product => {
     image: formatImageUrl(mainImage),
     images: product.images?.map(formatImageUrl) || [],
     category: product.category?.name || 'Uncategorized',
+    categoryInfo: product.category ? {
+      id: product.category._id,
+      name: product.category.name,
+      slug: product.category.slug,
+    } : undefined,
     rating: product.averageRating,
     reviews: product.reviewCount,
     description: product.description,

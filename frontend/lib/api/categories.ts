@@ -34,8 +34,8 @@ export const categoriesApi = {
       url += `?parent=${parentId || 'null'}`;
     }
     const response = await apiFetch(url);
-    const data = await parseResponse<{ categories: BackendCategory[] }>(response);
-    return data.categories.map(transformCategory);
+    const data = await parseResponse<{ success: boolean; categories: BackendCategory[] }>(response);
+    return (data.categories || []).map(transformCategory);
   },
 
   getCategory: async (id: string): Promise<Category> => {
