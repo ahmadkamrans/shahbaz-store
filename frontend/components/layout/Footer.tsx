@@ -13,10 +13,10 @@ export function Footer() {
           <div className="col-6 col-lg-3">
             <Link href="/" className="logo-footer">
               <Image
-                style={{ borderRadius: "24px" }}
-                src="/assets/images/logo.jpeg"
-                width={280}
-                height={58}
+                style={{ borderRadius: "0px" }}
+                src="/assets/images/image.png"
+                width={300}
+                height={120}
                 alt="Shahbaz"
               />
             </Link>
@@ -66,7 +66,7 @@ export function Footer() {
               </div>
             </div>
           </div>
-          <div className="col-6 col-lg-3">
+          {/* <div className="col-6 col-lg-3">
             <div className="widget">
               <h3 className="widget-title">Follow Us</h3>
               <div className="widget-content">
@@ -101,19 +101,12 @@ export function Footer() {
                 </div>
               </div>
             </div>
-          </div>
+          </div> */}
         </div>
-        <div className="footer-bottom d-lg-flex align-items-center">
-          <p className="footer-copyright font2 mb-0">
+        <div className="footer-bottom">
+          <p className="footer-copyright font2 mb-0 text-center">
             © {currentYear} Shahbaz. All Rights Reserved.
           </p>
-          <Image
-            className="ml-lg-auto ml-0 mt-lg-0 mt-1"
-            src="/assets/images/demoes/demo29/payments_long.png"
-            width={255}
-            height={22}
-            alt="payment"
-          />
         </div>
       </div>
     </footer>

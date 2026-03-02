@@ -140,12 +140,13 @@ export const getProducts = async (req, res, next) => {
         query.averageRating = { $gte: validatedMinRating };
       }
       
-      if (inStock === 'true') {
-        query.$or = [
+      // Handle inStock filter - use $and to combine with search if needed
+      const stockFilter = inStock === 'true' ? {
+        $or: [
           { stock: { $gt: 0 } },
           { 'variants': { $exists: true, $ne: new Map() } }
-        ];
-      }
+        ]
+      } : null;
 
       if (tags) {
         const tagArray = Array.isArray(tags) ? tags : [tags];
@@ -156,29 +157,46 @@ export const getProducts = async (req, res, next) => {
         // Sanitize search query to prevent regex injection
         const sanitizedSearch = search.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
         
-        // First, find categories that match the search term
-        const Category = (await import('../models/Category.js')).default;
-        const matchingCategories = await Category.find({
-          $or: [
-            { name: { $regex: sanitizedSearch, $options: 'i' } },
-            { slug: { $regex: sanitizedSearch, $options: 'i' } }
-          ]
-        }).select('_id').lean();
-        
-        const categoryIds = matchingCategories.map(cat => cat._id);
-        
-        // Build search query to include product fields and category matches
-        query.$or = [
+        // Build search query to include product fields
+        const searchConditions = [
           { name: { $regex: sanitizedSearch, $options: 'i' } },
           { description: { $regex: sanitizedSearch, $options: 'i' } },
           { shortDescription: { $regex: sanitizedSearch, $options: 'i' } },
           { tags: { $in: [new RegExp(sanitizedSearch, 'i')] } }
         ];
         
-        // Add category search if matching categories found
-        if (categoryIds.length > 0) {
-          query.$or.push({ category: { $in: categoryIds } });
+        // Only add category search if no explicit category filter is set
+        // (if category filter is set, we only want to search within that category)
+        if (!category) {
+          // Find categories that match the search term
+          const Category = (await import('../models/Category.js')).default;
+          const matchingCategories = await Category.find({
+            $or: [
+              { name: { $regex: sanitizedSearch, $options: 'i' } },
+              { slug: { $regex: sanitizedSearch, $options: 'i' } }
+            ]
+          }).select('_id').lean();
+          
+          const categoryIds = matchingCategories.map(cat => cat._id);
+          
+          // Add category search if matching categories found
+          if (categoryIds.length > 0) {
+            searchConditions.push({ category: { $in: categoryIds } });
+          }
         }
+        
+        // Combine search with stock filter if both exist
+        if (stockFilter) {
+          query.$and = [
+            { $or: searchConditions },
+            stockFilter
+          ];
+        } else {
+          query.$or = searchConditions;
+        }
+      } else if (stockFilter) {
+        // Only stock filter, no search
+        query.$or = stockFilter.$or;
       }
 
       const sortOptions = {};

@@ -69,14 +69,48 @@ export function Header() {
 
   return (
     <header className="header mb-2">
-      <div className="header-middle sticky-header">
-        <div className="container">
+      <div
+        className="header-middle sticky-header"
+        style={{
+          background:
+            "linear-gradient(126deg, rgba(255, 168, 168, 1) 0%, rgba(112, 14, 119, 1) 36%, rgba(112, 14, 119, 1) 70%)",
+        }}
+      >
+        <div className="container" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'relative' }}>
           <div className="header-left pl-0">
-            <nav className="main-nav w-100">
-              <ul className="menu">
+            <Link href="/" className="logo">
+              <Image
+                style={{ borderRadius: "8px" }}
+                src="/assets/images/image.png"
+                width={200}
+                height={100}
+                alt="Shahbaz"
+              />
+            </Link>
+          </div>
+          {/* End .header-left */}
+          
+          <div className="header-center" style={{ 
+            position: 'absolute', 
+            left: '50%', 
+            transform: 'translateX(-50%)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center'
+          }}>
+            <button
+              className="mobile-menu-toggler text-dark mr-2 d-lg-none"
+              type="button"
+              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+              style={{ position: 'absolute', left: '-50px' }}
+            >
+              <i className="fas fa-bars"></i>
+            </button>
+            <nav className="main-nav">
+              <ul className="menu" style={{ display: 'flex', listStyle: 'none', margin: 0, padding: 0, gap: '0.5rem' }}>
                 {linksLoading ? (
                   <li>
-                    <div className="text-white" style={{ padding: "21px 0px" }}>
+                    <div className="text-white" style={{ padding: "8px 0px" }}>
                       Loading...
                     </div>
                   </li>
@@ -106,28 +140,16 @@ export function Header() {
               </ul>
             </nav>
           </div>
-          {/* End .header-left */}
-          <div className="header-center ml-lg-auto ml-0">
+
+          <div className="header-right">
             <button
-              className="mobile-menu-toggler text-dark mr-2"
+              className="mobile-menu-toggler text-dark d-lg-none"
               type="button"
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+              style={{ marginRight: '0.5rem' }}
             >
               <i className="fas fa-bars"></i>
             </button>
-          </div>
-
-          <Link href="/" className="logo header-logo-center ">
-            <Image
-              style={{ borderRadius: "8px" }}
-              src="/assets/images/logo-navbar.jpeg"
-              width={180}
-              height={72}
-              alt="Shahbaz"
-            />
-          </Link>
-
-          <div className="header-right">
             <Link href="/login" className="header-icon" title="Login">
               <i className="icon-user-2"></i>
             </Link>

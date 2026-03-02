@@ -8,16 +8,16 @@ module.exports = {
   theme: {
     extend: {
       colors: {
-        "custom-blue": "#901781",
+        "custom-blue": "#700e77",
         "custom-red": "#F44A51",
         "custom-blue-light": "#a91e94",
-        "primary": "#901781",
+        "primary": "#700e77",
       },
       backgroundImage: {
         "custom-gradient-red":
-          "linear-gradient(270deg, #b824a3 0%, #901781 100%)",
+          "linear-gradient(270deg, #b824a3 0%, #700e77 100%)",
         "custom-gradient-blue":
-          "linear-gradient(90deg, #901781 0%, #a91e94 100%)",
+          "linear-gradient(90deg, #700e77 0%, #a91e94 100%)",
       },
       fontFamily: {
         "open-sans-regular": ["Open-Sans-Regular", "sans-serif"],

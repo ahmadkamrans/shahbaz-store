@@ -10,6 +10,7 @@ import { getAuthToken } from "@/lib/api/config";
 import { formatCurrency } from "@/lib/utils/currency";
 import { Country, State, City, ICountry } from "country-state-city";
 import { discountCodesApi } from "@/lib/api/discountCodes";
+import { authApi, User } from "@/lib/api/auth";
 
 const SHIPPING_FLAT = 145.8; // example flat rate
 
@@ -34,6 +35,14 @@ export default function CheckoutPage() {
   const [billingState, setBillingState] = useState<string>("");
   const [billingCity, setBillingCity] = useState<string>("");
   
+  // Form field state for controlled inputs
+  const [firstName, setFirstName] = useState<string>("");
+  const [lastName, setLastName] = useState<string>("");
+  const [street, setStreet] = useState<string>("");
+  const [zip, setZip] = useState<string>("");
+  const [phone, setPhone] = useState<string>("");
+  const [email, setEmail] = useState<string>("");
+  
   // Shipping address state
   const [shippingCountry, setShippingCountry] = useState<string>("");
   const [shippingState, setShippingState] = useState<string>("");
@@ -43,11 +52,92 @@ export default function CheckoutPage() {
   const [isMounted, setIsMounted] = useState(false);
   const [countries, setCountries] = useState<ICountry[]>([]);
   
+  // User profile data
+  const [user, setUser] = useState<User | null>(null);
+  
   // Initialize countries on client side only
   useEffect(() => {
     setIsMounted(true);
     setCountries(Country.getAllCountries());
   }, []);
+  
+  // Load user profile data
+  useEffect(() => {
+    const loadUserProfile = async () => {
+      if (!getAuthToken() || !isMounted || countries.length === 0) {
+        return;
+      }
+      
+      try {
+        const userData = await authApi.getMe();
+        console.log('Loaded user profile:', userData);
+        setUser(userData);
+        
+        // Pre-fill form fields with user data
+        if (userData.name) {
+          const nameParts = userData.name.split(' ');
+          setFirstName(nameParts[0] || '');
+          setLastName(nameParts.slice(1).join(' ') || '');
+        }
+        
+        if (userData.email) {
+          setEmail(userData.email);
+        }
+        
+        if (userData.phone) {
+          setPhone(userData.phone);
+        }
+        
+        // Pre-fill billing address if available
+        if (userData.address) {
+          const address = userData.address;
+          console.log('Loading address from profile:', address);
+          
+          if (address.street) {
+            setStreet(address.street);
+          }
+          
+          if (address.zipCode) {
+            setZip(address.zipCode);
+          }
+          
+          // Find country by name or ISO code
+          if (address.country) {
+            const country = countries.find(
+              c => c.name.toLowerCase() === address.country?.toLowerCase() ||
+                   c.isoCode.toLowerCase() === address.country?.toLowerCase()
+            );
+            if (country) {
+              setBillingCountry(country.isoCode);
+              
+              // Find state by name
+              if (address.state && country) {
+                const states = State.getStatesOfCountry(country.isoCode);
+                const state = states.find(
+                  s => s.name.toLowerCase() === address.state?.toLowerCase() ||
+                       s.isoCode.toLowerCase() === address.state?.toLowerCase()
+                );
+                if (state) {
+                  setBillingState(state.isoCode);
+                  
+                  // Find city
+                  if (address.city) {
+                    setBillingCity(address.city);
+                  }
+                }
+              }
+            }
+          }
+        } else {
+          console.log('No address found in user profile');
+        }
+      } catch (error) {
+        console.error('Failed to load user profile:', error);
+      }
+    };
+    
+    loadUserProfile();
+  }, [isMounted, countries]);
   
   // Get states based on selected country (only on client)
   const billingStates = isMounted && billingCountry ? State.getStatesOfCountry(billingCountry) : [];
@@ -91,8 +181,11 @@ export default function CheckoutPage() {
         setDiscountCode("");
         localStorage.removeItem('appliedDiscountCode');
       }
-    } catch (error: any) {
-      setCouponError(error.message || "Failed to validate coupon code");
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error 
+        ? error.message 
+        : "Failed to validate coupon code";
+      setCouponError(errorMessage);
       setDiscountAmount(0);
       setDiscountCode("");
       localStorage.removeItem('appliedDiscountCode');
@@ -262,6 +355,43 @@ export default function CheckoutPage() {
       
       console.log('Order created:', order);
       
+      // Save billing address to user profile for future checkouts
+      try {
+        const billingAddress = {
+          street: street.trim() || '',
+          city: billingCity.trim() || '',
+          state: billingState ? getStateName(billingCountry, billingState) : '',
+          zipCode: zip.trim() || '',
+          country: billingCountry ? getCountryName(billingCountry) : '',
+        };
+        
+        // Also save name, email, and phone if provided
+        const profileUpdate: Partial<User> = {
+          address: billingAddress,
+        };
+        
+        if (firstName.trim() && lastName.trim()) {
+          profileUpdate.name = `${firstName.trim()} ${lastName.trim()}`;
+        }
+        
+        if (email.trim()) {
+          profileUpdate.email = email.trim();
+        }
+        
+        if (phone.trim()) {
+          profileUpdate.phone = phone.trim();
+        }
+        
+        // Update user profile with checkout information
+        console.log('Saving profile update:', profileUpdate);
+        const updatedUser = await authApi.updateProfile(profileUpdate);
+        console.log('Profile updated successfully:', updatedUser);
+        setUser(updatedUser); // Refresh user data
+      } catch (error) {
+        // Don't fail the order if profile update fails, just log it
+        console.error('Failed to save address to profile:', error);
+      }
+      
       // Clear discount code from localStorage after successful order
       localStorage.removeItem('appliedDiscountCode');
       clearCart();
@@ -320,7 +450,14 @@ export default function CheckoutPage() {
                             *
                           </abbr>
                         </label>
-                        <input type="text" className="form-control" name="firstName" required />
+                        <input 
+                          type="text" 
+                          className="form-control" 
+                          name="firstName" 
+                          required 
+                          value={firstName}
+                          onChange={(e) => setFirstName(e.target.value)}
+                        />
                       </div>
                     </div>
 
@@ -332,7 +469,14 @@ export default function CheckoutPage() {
                             *
                           </abbr>
                         </label>
-                        <input type="text" className="form-control" name="lastName" required />
+                        <input 
+                          type="text" 
+                          className="form-control" 
+                          name="lastName" 
+                          required 
+                          value={lastName}
+                          onChange={(e) => setLastName(e.target.value)}
+                        />
                       </div>
                     </div>
                   </div>
@@ -383,6 +527,8 @@ export default function CheckoutPage() {
                       name="street"
                       placeholder="House number and street name"
                       required
+                      value={street}
+                      onChange={(e) => setStreet(e.target.value)}
                     />
                   </div>
 
@@ -468,7 +614,14 @@ export default function CheckoutPage() {
                         *
                       </abbr>
                     </label>
-                    <input type="text" className="form-control" name="zip" required />
+                    <input 
+                      type="text" 
+                      className="form-control" 
+                      name="zip" 
+                      required 
+                      value={zip}
+                      onChange={(e) => setZip(e.target.value)}
+                    />
                   </div>
 
                   <div className="form-group">
@@ -478,7 +631,14 @@ export default function CheckoutPage() {
                         *
                       </abbr>
                     </label>
-                    <input type="tel" className="form-control" required />
+                    <input 
+                      type="tel" 
+                      className="form-control" 
+                      name="phone"
+                      required 
+                      value={phone}
+                      onChange={(e) => setPhone(e.target.value)}
+                    />
                   </div>
 
                   <div className="form-group">
@@ -488,7 +648,14 @@ export default function CheckoutPage() {
                         *
                       </abbr>
                     </label>
-                    <input type="email" className="form-control" required />
+                    <input 
+                      type="email" 
+                      className="form-control" 
+                      name="email"
+                      required 
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                    />
                   </div>
 
                   {/* <div className="form-group mb-1">
@@ -745,7 +912,13 @@ export default function CheckoutPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {items.length === 0 ? (
+                  {!isMounted ? (
+                    <tr>
+                      <td colSpan={2} className="text-center py-3">
+                        Loading...
+                      </td>
+                    </tr>
+                  ) : items.length === 0 ? (
                     <tr>
                       <td colSpan={2} className="text-center py-3">
                         Your cart is empty.{" "}

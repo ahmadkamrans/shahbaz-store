@@ -123,7 +123,13 @@ export function Cart({ isOpen, onToggle }: CartProps) {
                   <Link href="/cart" className="btn btn-gray btn-block view-cart">
                     View Cart
                   </Link>
-                  <Link href="/checkout" className="btn btn-dark btn-block">
+                  <Link 
+                    href="/checkout" 
+                    className="btn btn-dark btn-block"
+                    onClick={() => {
+                      onToggle();
+                    }}
+                  >
                     Checkout
                   </Link>
                 </div>

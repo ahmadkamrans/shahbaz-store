@@ -63,7 +63,8 @@ export const authApi = {
 
   getMe: async (): Promise<User> => {
     const response = await apiFetch('/api/auth/me');
-    return parseResponse<User>(response);
+    const result = await parseResponse<{ success: boolean; user: User }>(response);
+    return result.user;
   },
 
   updateProfile: async (data: Partial<User>): Promise<User> => {
@@ -71,6 +72,7 @@ export const authApi = {
       method: 'PUT',
       body: JSON.stringify(data),
     });
-    return parseResponse<User>(response);
+    const result = await parseResponse<{ success: boolean; user: User }>(response);
+    return result.user;
   },
 };

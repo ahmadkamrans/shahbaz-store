@@ -49,12 +49,23 @@ export default function ProductsPage() {
     return () => document.body.classList.remove("sidebar-opened");
   }, [sidebarOpen]);
 
-  // Read search query from URL params on mount
+  // Read search and category query params from URL on mount and when they change
   useEffect(() => {
     const search = searchParams.get("search");
-    if (search) {
-      setSearchQuery(search);
+    const category = searchParams.get("category");
+    
+    // If category is in URL, set it and clear search
+    if (category) {
+      setSelectedCategory(category);
+      setSearchQuery(""); // Clear search when category is selected
     } else {
+      setSelectedCategory(""); // Clear category when not in URL
+    }
+    
+    // If search is in URL (and no category), set it
+    if (search && !category) {
+      setSearchQuery(search);
+    } else if (!search) {
       setSearchQuery(""); // Clear search query when no search param in URL
     }
   }, [searchParams]);
@@ -152,6 +163,7 @@ export default function ProductsPage() {
             onClick={(e) => {
               e.preventDefault();
               setSelectedCategory(category.id);
+              setSearchQuery(""); // Clear search when category is selected
               setPage(1);
             }}
             style={{ flex: 1 }}
@@ -349,7 +361,7 @@ export default function ProductsPage() {
 
         <div className="row main-content-wrapper mb-2 pb-2">
           <aside
-            className={`sidebar-shop col-lg-3 order-lg-first mobile-sidebar ${sidebarOpen ? "sidebar-opened" : ""}`}
+            className={`sidebar-shop col-lg-2 order-lg-first mobile-sidebar ${sidebarOpen ? "sidebar-opened" : ""}`}
             style={{ 
               display: "block",
               position: "relative",
@@ -388,6 +400,7 @@ export default function ProductsPage() {
                           onClick={(e) => {
                             e.preventDefault();
                             setSelectedCategory("");
+                            setSearchQuery(""); // Clear search when "All" is selected
                             setPage(1);
                           }}
                         >
@@ -504,7 +517,7 @@ export default function ProductsPage() {
             </div>
           </aside>
 
-          <div className="col-lg-9">
+          <div className="col-lg-10">
             <nav
               className="toolbox sticky-header"
               data-sticky-options="{'mobile': true}"

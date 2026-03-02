@@ -3,8 +3,12 @@
 import { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
 import Link from "next/link";
-import Image from "next/image";
 import toast from "react-hot-toast";
+import { Swiper, SwiperSlide } from "swiper/react";
+import { Thumbs, FreeMode } from "swiper/modules";
+import "swiper/css";
+import "swiper/css/thumbs";
+import "swiper/css/free-mode";
 import { Product } from "@/types";
 import { formatPrice } from "@/lib/utils";
 import { useCart } from "@/lib/store/cart-store";
@@ -35,6 +39,11 @@ export function QuickViewModal({
   >({});
   const [variantPrice, setVariantPrice] = useState<number | null>(null);
   const [variantStock, setVariantStock] = useState<number | null>(null);
+  const [variantImage, setVariantImage] = useState<string | null>(null);
+  const [zoomActive, setZoomActive] = useState(false);
+  const [zoomPosition, setZoomPosition] = useState({ x: 50, y: 50 });
+  const [thumbsSwiper, setThumbsSwiper] = useState<any>(null);
+  const [failedImages, setFailedImages] = useState<Set<string>>(new Set());
   const { addItem: addToCart } = useCart();
   const { addItem: addToWishlist, removeItem, isInWishlist } = useWishlist();
 
@@ -47,6 +56,9 @@ export function QuickViewModal({
       setSelectedVariants({});
       setVariantPrice(null);
       setVariantStock(null);
+      setVariantImage(null);
+      setFailedImages(new Set());
+      setThumbsSwiper(null);
       return;
     }
 
@@ -69,6 +81,9 @@ export function QuickViewModal({
           setSelectedVariants({});
           setVariantPrice(null);
           setVariantStock(null);
+          setVariantImage(null);
+          setFailedImages(new Set());
+          setThumbsSwiper(null);
         } catch (error: any) {
           console.error("Failed to fetch product:", error);
           setError(error.message || "Failed to load product");
@@ -85,6 +100,11 @@ export function QuickViewModal({
       setSelectedVariants({});
       setVariantPrice(null);
       setVariantStock(null);
+      setVariantImage(null);
+      setFailedImages(new Set());
+      setThumbsSwiper(null);
+      setZoomActive(false);
+      setZoomPosition({ x: 50, y: 50 });
     }
   }, [isOpen, productId, initialProduct]);
 
@@ -93,6 +113,7 @@ export function QuickViewModal({
     if (!product?.variants || product.variants.length === 0) {
       setVariantPrice(null);
       setVariantStock(null);
+      setVariantImage(null);
       return;
     }
 
@@ -100,6 +121,7 @@ export function QuickViewModal({
     if (Object.keys(selectedVariants).length === 0) {
       setVariantPrice(null);
       setVariantStock(null);
+      setVariantImage(null);
       return;
     }
 
@@ -136,6 +158,7 @@ export function QuickViewModal({
     }
 
     let variantStockValue: number | null = null;
+    let variantImageValue: string | null = null;
     let totalPriceModifier = 0;
 
     if (matchedVariant) {
@@ -148,6 +171,9 @@ export function QuickViewModal({
 
       if ((matchedVariant as any).stock !== undefined) {
         variantStockValue = (matchedVariant as any).stock;
+      }
+      if ((matchedVariant as any).image) {
+        variantImageValue = (matchedVariant as any).image;
       }
     } else {
       // If no exact match, calculate from individual variant selections
@@ -170,12 +196,15 @@ export function QuickViewModal({
             totalPriceModifier += variant.price - product.price;
           }
 
-          // Use stock from first variant if not already set
+          // Use stock/image from first variant if not already set
           if (
             variantStockValue === null &&
             (variant as any).stock !== undefined
           ) {
             variantStockValue = (variant as any).stock;
+          }
+          if (variantImageValue === null && (variant as any).image) {
+            variantImageValue = (variant as any).image;
           }
         }
       });
@@ -184,9 +213,35 @@ export function QuickViewModal({
     const finalPrice = product.price + totalPriceModifier;
     setVariantPrice(finalPrice !== product.price ? finalPrice : null);
     setVariantStock(variantStockValue);
+    setVariantImage(variantImageValue);
   }, [selectedVariants, product]);
 
   if (!isOpen) return null;
+
+  // Handle image load errors
+  const handleImageError = (imgSrc: string) => {
+    setFailedImages(prev => new Set(prev).add(imgSrc));
+  };
+  
+  // Get image source with fallback
+  const defaultImage = '/assets/images/products/product-1.jpg';
+  const getImageSrc = (imgSrc: string) => {
+    if (failedImages.has(imgSrc) || !imgSrc) {
+      return defaultImage;
+    }
+    return imgSrc;
+  };
+
+  // Use fallback image if no images provided, prioritize variant image if available
+  const productImages = product 
+    ? (variantImage 
+        ? [variantImage, ...(product.images && product.images.length > 0 
+            ? product.images.filter(img => img && img.trim() !== '' && img !== variantImage)
+            : (product.image && product.image !== variantImage ? [product.image] : []))]
+        : (product.images && product.images.length > 0 
+            ? product.images.filter(img => img && img.trim() !== '')
+            : (product.image ? [product.image] : [defaultImage])))
+    : [defaultImage];
 
   const handleAddToCart = () => {
     if (product) {
@@ -350,27 +405,88 @@ export function QuickViewModal({
               ) : product ? (
                 <div className="row">
                   <div className="col-md-6">
-                    {product.image ? (
-                      <Image
-                        src={product.image}
-                        alt={product.name || "Product"}
-                        width={500}
-                        height={500}
-                        className="img-fluid h-100 w-100 object-fit-cover"
-                        style={{ borderRadius: "8px" }}
-                        onError={(e) => {
-                          (e.target as HTMLImageElement).src =
-                            "/assets/images/products/product-1.jpg";
-                        }}
-                      />
-                    ) : (
-                      <div
-                        className="bg-light d-flex align-items-center justify-content-center"
-                        style={{ height: "500px" }}
+                    <div className="product-slider-container">
+                      <Swiper
+                        modules={[Thumbs]}
+                        thumbs={{ swiper: thumbsSwiper && !thumbsSwiper.destroyed ? thumbsSwiper : null }}
+                        className="product-single-carousel show-nav-hover"
                       >
-                        <span>No image available</span>
-                      </div>
-                    )}
+                        {productImages.map((img, index) => {
+                          const imageSrc = getImageSrc(img);
+                          return (
+                            <SwiperSlide key={index}>
+                              <div 
+                                className="product-image-zoom-container"
+                                onMouseEnter={() => setZoomActive(true)}
+                                onMouseLeave={() => {
+                                  setZoomActive(false);
+                                  setZoomPosition({ x: 50, y: 50 });
+                                }}
+                                onMouseMove={(e) => {
+                                  const container = e.currentTarget;
+                                  const rect = container.getBoundingClientRect();
+                                  
+                                  const x = e.clientX - rect.left;
+                                  const y = e.clientY - rect.top;
+                                  
+                                  // Calculate percentage position within the container
+                                  const percentX = (x / rect.width) * 100;
+                                  const percentY = (y / rect.height) * 100;
+                                  
+                                  setZoomPosition({ 
+                                    x: Math.max(0, Math.min(100, percentX)), 
+                                    y: Math.max(0, Math.min(100, percentY)) 
+                                  });
+                                }}
+                                style={{ borderRadius: "8px", overflow: "hidden" }}
+                              >
+                                <img
+                                  className={`product-single-image ${zoomActive ? 'zoomed' : ''}`}
+                                  src={imageSrc}
+                                  alt={product.name || "Product"}
+                                  onError={() => handleImageError(img)}
+                                  style={{ 
+                                    width: '100%', 
+                                    height: 'auto', 
+                                    display: 'block',
+                                    transform: zoomActive 
+                                      ? `scale(2.5) translate(${(50 - zoomPosition.x) * 0.6}%, ${(50 - zoomPosition.y) * 0.6}%)`
+                                      : 'scale(1)',
+                                    transformOrigin: 'center center',
+                                  }}
+                                />
+                              </div>
+                            </SwiperSlide>
+                          );
+                        })}
+                      </Swiper>
+                      
+                      {productImages.length > 1 && (
+                        <Swiper
+                          onSwiper={setThumbsSwiper}
+                          modules={[FreeMode, Thumbs]}
+                          spaceBetween={10}
+                          slidesPerView={Math.min(4, productImages.length)}
+                          freeMode={true}
+                          watchSlidesProgress={true}
+                          className="prod-thumbnail mt-3"
+                        >
+                          {productImages.map((thumb, index) => {
+                            const thumbSrc = getImageSrc(thumb);
+                            return (
+                              <SwiperSlide key={index} className="product-thumbnail-slide">
+                                <img
+                                  src={thumbSrc}
+                                  alt={`Thumbnail ${index + 1}`}
+                                  onError={() => handleImageError(thumb)}
+                                  style={{ borderRadius: "4px", cursor: "pointer" }}
+                                />
+                              </SwiperSlide>
+                            );
+                          })}
+                        </Swiper>
+                      )}
+                    </div>
                   </div>
                   <div className="col-md-6">
                     <h3 className="mb-2">{product.name || "Product"}</h3>

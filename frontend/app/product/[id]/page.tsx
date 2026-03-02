@@ -39,6 +39,8 @@ export default function ProductDetailPage() {
   const [failedImages, setFailedImages] = useState<Set<string>>(new Set());
   const [prevProduct, setPrevProduct] = useState<Product | null>(null);
   const [nextProduct, setNextProduct] = useState<Product | null>(null);
+  const [zoomActive, setZoomActive] = useState(false);
+  const [zoomPosition, setZoomPosition] = useState({ x: 50, y: 50 });
 
   const productId = params.id as string;
 
@@ -402,13 +404,46 @@ export default function ProductDetailPage() {
                     const imageSrc = getImageSrc(img);
                     return (
                       <SwiperSlide key={index}>
-                        <img
-                          className="product-single-image"
-                          src={imageSrc}
-                          alt={product.name}
-                          onError={() => handleImageError(img)}
-                          style={{ width: '100%', height: 'auto' }}
-                        />
+                        <div 
+                          className="product-image-zoom-container"
+                          onMouseEnter={() => setZoomActive(true)}
+                          onMouseLeave={() => {
+                            setZoomActive(false);
+                            setZoomPosition({ x: 0, y: 0 });
+                          }}
+                          onMouseMove={(e) => {
+                            const container = e.currentTarget;
+                            const rect = container.getBoundingClientRect();
+                            
+                            const x = e.clientX - rect.left;
+                            const y = e.clientY - rect.top;
+                            
+                            // Calculate percentage position within the container
+                            const percentX = (x / rect.width) * 100;
+                            const percentY = (y / rect.height) * 100;
+                            
+                            setZoomPosition({ 
+                              x: Math.max(0, Math.min(100, percentX)), 
+                              y: Math.max(0, Math.min(100, percentY)) 
+                            });
+                          }}
+                        >
+                          <img
+                            className={`product-single-image ${zoomActive ? 'zoomed' : ''}`}
+                            src={imageSrc}
+                            alt={product.name}
+                            onError={() => handleImageError(img)}
+                            style={{ 
+                              width: '100%', 
+                              height: 'auto', 
+                              display: 'block',
+                              transform: zoomActive 
+                                ? `scale(2.5) translate(${(50 - zoomPosition.x) * 0.6}%, ${(50 - zoomPosition.y) * 0.6}%)`
+                                : 'scale(1)',
+                              transformOrigin: 'center center',
+                            }}
+                          />
+                        </div>
                       </SwiperSlide>
                     );
                   })}
@@ -422,7 +457,7 @@ export default function ProductDetailPage() {
                 <Swiper
                   onSwiper={setThumbsSwiper}
                   modules={[FreeMode, Thumbs]}
-                  spaceBetween={10}
+                  spaceBetween={0}
                   slidesPerView={Math.min(5, productImages.length)}
                   freeMode={true}
                   watchSlidesProgress={true}
@@ -431,12 +466,11 @@ export default function ProductDetailPage() {
                   {productImages.map((thumb, index) => {
                     const thumbSrc = getImageSrc(thumb);
                     return (
-                      <SwiperSlide key={index}>
+                      <SwiperSlide key={index} className="product-thumbnail-slide">
                         <img
                           src={thumbSrc}
                           alt={`Thumbnail ${index + 1}`}
                           onError={() => handleImageError(thumb)}
-                          style={{ width: '110px', height: '110px', objectFit: 'cover' }}
                         />
                       </SwiperSlide>
                     );
