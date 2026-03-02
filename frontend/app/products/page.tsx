@@ -12,11 +12,13 @@ import { formatPrice } from "@/lib/utils";
 import { categoriesApi } from "@/lib/api/categories";
 import { Category } from "@/types";
 import { useWishlist } from "@/lib/store/wishlist-store";
+import { useSiteLoading } from "@/lib/loading-context";
 import { ProductsFilterMenu } from "@/components/layout/ProductsFilterMenu";
 
 export default function ProductsPage() {
   const searchParams = useSearchParams();
   const { fetchWishlist } = useWishlist();
+  const { setLoading: setSiteLoading } = useSiteLoading();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [sortBy, setSortBy] = useState("menu_order");
   const [products, setProducts] = useState<Product[]>([]);
@@ -199,6 +201,7 @@ export default function ProductsPage() {
     const fetchData = async () => {
       try {
         setLoading(true);
+        setSiteLoading(true);
         setApiFailed(false);
 
         const sortMap: Record<
@@ -244,6 +247,7 @@ export default function ProductsPage() {
         setApiFailed(true);
       } finally {
         setLoading(false);
+        setSiteLoading(false);
       }
     };
 
@@ -665,7 +669,7 @@ export default function ProductsPage() {
                       </select>
                     </div>
                   </div>
-
+{/* 
                   <div className="toolbox-item layout-modes">
                     <a
                       href="#"
@@ -689,16 +693,12 @@ export default function ProductsPage() {
                     >
                       <i className="icon-mode-list"></i>
                     </a>
-                  </div>
+                  </div> */}
                 </div>
               </nav>
 
               <div className="row products-body">
-                {loading ? (
-                  <div className="col-12 text-center py-5">
-                    <p>Loading products...</p>
-                  </div>
-                ) : products.length === 0 ? (
+                {loading ? null : products.length === 0 ? (
                   <div className="col-12 text-center py-5">
                     <p>No products found.</p>
                   </div>

@@ -5,12 +5,14 @@ import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
 import { ordersApi, Order } from "@/lib/api/orders";
+import { useSiteLoading } from "@/lib/loading-context";
 import { formatPrice } from "@/lib/utils";
 import { getAuthToken } from "@/lib/api/config";
 
 export default function OrderDetailPage() {
   const params = useParams();
   const router = useRouter();
+  const { setLoading: setSiteLoading } = useSiteLoading();
   const orderId = params.id as string;
   const [order, setOrder] = useState<Order | null>(null);
   const [loading, setLoading] = useState(true);
@@ -25,12 +27,14 @@ export default function OrderDetailPage() {
     const fetchOrder = async () => {
       try {
         setLoading(true);
+        setSiteLoading(true);
         const orderData = await ordersApi.getOrder(orderId);
         setOrder(orderData);
       } catch (error: any) {
         setError(error.message || "Failed to load order");
       } finally {
         setLoading(false);
+        setSiteLoading(false);
       }
     };
 
@@ -40,15 +44,7 @@ export default function OrderDetailPage() {
   }, [orderId, router]);
 
   if (loading) {
-    return (
-      <main className="main">
-        <div className="container">
-          <div className="text-center py-5">
-            <p>Loading order...</p>
-          </div>
-        </div>
-      </main>
-    );
+    return null;
   }
 
   if (error || !order) {

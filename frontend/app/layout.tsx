@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Header } from "@/components/layout/Header";
 import { Footer } from "@/components/layout/Footer";
+import { SiteLoaderProvider } from "@/components/layout/SiteLoaderProvider";
 import { WebFontLoader } from "./webfont-loader";
 import { Toaster } from "react-hot-toast";
 import "./globals.css";
@@ -28,11 +29,13 @@ export default function RootLayout({
       </head>
       <body className="loaded">
         <WebFontLoader />
-        <div className="page-wrapper">
-          <Header />
-          {children}
-          <Footer />
-        </div>
+        <SiteLoaderProvider>
+          <div className="page-wrapper">
+            <Header />
+            {children}
+            <Footer />
+          </div>
+        </SiteLoaderProvider>
         <a id="scroll-top" href="#top" title="Top" role="button">
           <i className="icon-angle-up"></i>
         </a>

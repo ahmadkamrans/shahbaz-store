@@ -14,6 +14,7 @@ import { Product } from '@/types';
 import { formatPrice } from '@/lib/utils';
 import { useCart } from '@/lib/store/cart-store';
 import { useWishlist } from '@/lib/store/wishlist-store';
+import { useSiteLoading } from '@/lib/loading-context';
 import { productsApi } from '@/lib/api/products';
 import { reviewsApi, Review } from '@/lib/api/reviews';
 import { getAuthToken } from '@/lib/api/config';
@@ -22,6 +23,7 @@ export default function ProductDetailPage() {
   const params = useParams();
   const { addItem } = useCart();
   const { addItem: addToWishlist, removeItem, isInWishlist, fetchWishlist } = useWishlist();
+  const { setLoading: setSiteLoading } = useSiteLoading();
   const [product, setProduct] = useState<Product | null>(null);
   const [reviews, setReviews] = useState<Review[]>([]);
   const [loading, setLoading] = useState(true);
@@ -53,6 +55,7 @@ export default function ProductDetailPage() {
     const fetchProduct = async () => {
       try {
         setLoading(true);
+        setSiteLoading(true);
         // Backend accepts both ID and slug in the same endpoint
         const productData = await productsApi.getProduct(productId);
         setProduct(productData);
@@ -97,6 +100,7 @@ export default function ProductDetailPage() {
         setProduct(null);
       } finally {
         setLoading(false);
+        setSiteLoading(false);
       }
     };
 
@@ -310,15 +314,7 @@ export default function ProductDetailPage() {
   };
 
   if (loading) {
-    return (
-      <main className="main">
-        <div className="container">
-          <div className="text-center py-5">
-            <p>Loading product...</p>
-          </div>
-        </div>
-      </main>
-    );
+    return null;
   }
 
   if (!product && !loading) {

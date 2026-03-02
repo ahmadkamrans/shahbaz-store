@@ -4,10 +4,12 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { authApi, User } from "@/lib/api/auth";
+import { useSiteLoading } from "@/lib/loading-context";
 import { getAuthToken } from "@/lib/api/config";
 
 export default function AccountPage() {
   const router = useRouter();
+  const { setLoading: setSiteLoading } = useSiteLoading();
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState(false);
@@ -36,6 +38,7 @@ export default function AccountPage() {
     const fetchUser = async () => {
       try {
         setLoading(true);
+        setSiteLoading(true);
         const userData = await authApi.getMe();
         setUser(userData);
         setFormData({
@@ -54,6 +57,7 @@ export default function AccountPage() {
         setError(error.message || "Failed to load profile");
       } finally {
         setLoading(false);
+        setSiteLoading(false);
       }
     };
 
@@ -85,15 +89,7 @@ export default function AccountPage() {
   };
 
   if (loading) {
-    return (
-      <main className="main">
-        <div className="container">
-          <div className="text-center py-5">
-            <p>Loading profile...</p>
-          </div>
-        </div>
-      </main>
-    );
+    return null;
   }
 
   if (!user) {

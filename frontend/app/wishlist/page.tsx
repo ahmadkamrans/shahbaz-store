@@ -5,11 +5,17 @@ import Link from "next/link";
 import Image from "next/image";
 import { useWishlist } from "@/lib/store/wishlist-store";
 import { useCart } from "@/lib/store/cart-store";
+import { useSiteLoading } from "@/lib/loading-context";
 import { formatCurrency } from "@/lib/utils/currency";
 
 export default function WishlistPage() {
   const { items, removeItem, fetchWishlist, loading } = useWishlist();
   const { addItem } = useCart();
+  const { setLoading: setSiteLoading } = useSiteLoading();
+
+  useEffect(() => {
+    setSiteLoading(loading);
+  }, [loading, setSiteLoading]);
 
   useEffect(() => {
     fetchWishlist();
@@ -91,13 +97,7 @@ export default function WishlistPage() {
               </tr>
             </thead>
             <tbody>
-              {loading ? (
-                <tr>
-                  <td colSpan={5} className="text-center py-5">
-                    <p>Loading wishlist...</p>
-                  </td>
-                </tr>
-              ) : items.length === 0 ? (
+              {loading ? null : items.length === 0 ? (
                 <tr>
                   <td colSpan={5} className="text-center py-5">
                     <p className="mb-2">Your wishlist is empty.</p>

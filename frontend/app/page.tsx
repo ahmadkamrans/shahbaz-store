@@ -11,6 +11,7 @@ import { productsApi } from "@/lib/api/products";
 import { categoriesApi } from "@/lib/api/categories";
 import { useWishlist } from "@/lib/store/wishlist-store";
 import { useCart } from "@/lib/store/cart-store";
+import { useSiteLoading } from "@/lib/loading-context";
 import { formatCurrency } from "@/lib/utils/currency";
 
 const tabs = ["kitchen", "dining", "bedroom", "living", "office", "outdoor"];
@@ -18,6 +19,7 @@ const tabs = ["kitchen", "dining", "bedroom", "living", "office", "outdoor"];
 export default function HomePage() {
   const { addItem: addToWishlist, removeItem, isInWishlist, fetchWishlist } = useWishlist();
   const { addItem: addToCart } = useCart();
+  const { setLoading: setSiteLoading } = useSiteLoading();
   const [activeTab, setActiveTab] = useState("kitchen");
   const [featuredProducts, setFeaturedProducts] = useState<
     Record<string, Product[]>
@@ -54,6 +56,7 @@ export default function HomePage() {
     const fetchData = async () => {
       try {
         setLoading(true);
+        setSiteLoading(true);
 
         // Fetch categories to map tab names to category IDs
         const categories = await categoriesApi.getCategories();
@@ -126,6 +129,7 @@ export default function HomePage() {
         console.error("Failed to fetch data:", error);
       } finally {
         setLoading(false);
+        setSiteLoading(false);
       }
     };
 
@@ -283,11 +287,7 @@ export default function HomePage() {
           </div>
 
           <div className="tab-content">
-            {loading ? (
-              <div className="text-center py-5">
-                <p>Loading products...</p>
-              </div>
-            ) : (
+            {loading ? null : (
               tabs.map((tab) => {
                 const products = featuredProducts[tab] || [];
                 return (
@@ -315,11 +315,7 @@ export default function HomePage() {
       <section>
         <div className="container">
           <div className="featured-section bg-white appear-animate">
-            {loading ? (
-              <div className="text-center py-5">
-                <p>Loading products...</p>
-              </div>
-            ) : (
+            {loading ? null : (
               <div className="row">
                 {allProducts.map((product) => (
                   <div

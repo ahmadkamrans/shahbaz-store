@@ -5,11 +5,13 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
 import { ordersApi, Order } from "@/lib/api/orders";
+import { useSiteLoading } from "@/lib/loading-context";
 import { formatPrice } from "@/lib/utils";
 import { getAuthToken } from "@/lib/api/config";
 
 export default function OrdersPage() {
   const router = useRouter();
+  const { setLoading: setSiteLoading } = useSiteLoading();
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -23,12 +25,14 @@ export default function OrdersPage() {
     const fetchOrders = async () => {
       try {
         setLoading(true);
+        setSiteLoading(true);
         const ordersData = await ordersApi.getOrders();
         setOrders(ordersData);
       } catch (error: any) {
         setError(error.message || "Failed to load orders");
       } finally {
         setLoading(false);
+        setSiteLoading(false);
       }
     };
 
@@ -44,15 +48,7 @@ export default function OrdersPage() {
   };
 
   if (loading) {
-    return (
-      <main className="main">
-        <div className="container">
-          <div className="text-center py-5">
-            <p>Loading orders...</p>
-          </div>
-        </div>
-      </main>
-    );
+    return null;
   }
 
   return (
