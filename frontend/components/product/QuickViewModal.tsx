@@ -220,11 +220,11 @@ export function QuickViewModal({
 
   // Handle image load errors
   const handleImageError = (imgSrc: string) => {
-    setFailedImages(prev => new Set(prev).add(imgSrc));
+    setFailedImages((prev) => new Set(prev).add(imgSrc));
   };
-  
+
   // Get image source with fallback
-  const defaultImage = '/assets/images/products/product-1.jpg';
+  const defaultImage = "/assets/images/products/product-1.jpg";
   const getImageSrc = (imgSrc: string) => {
     if (failedImages.has(imgSrc) || !imgSrc) {
       return defaultImage;
@@ -233,14 +233,23 @@ export function QuickViewModal({
   };
 
   // Use fallback image if no images provided, prioritize variant image if available
-  const productImages = product 
-    ? (variantImage 
-        ? [variantImage, ...(product.images && product.images.length > 0 
-            ? product.images.filter(img => img && img.trim() !== '' && img !== variantImage)
-            : (product.image && product.image !== variantImage ? [product.image] : []))]
-        : (product.images && product.images.length > 0 
-            ? product.images.filter(img => img && img.trim() !== '')
-            : (product.image ? [product.image] : [defaultImage])))
+  const productImages = product
+    ? variantImage
+      ? [
+          variantImage,
+          ...(product.images && product.images.length > 0
+            ? product.images.filter(
+                (img) => img && img.trim() !== "" && img !== variantImage,
+              )
+            : product.image && product.image !== variantImage
+              ? [product.image]
+              : []),
+        ]
+      : product.images && product.images.length > 0
+        ? product.images.filter((img) => img && img.trim() !== "")
+        : product.image
+          ? [product.image]
+          : [defaultImage]
     : [defaultImage];
 
   const handleAddToCart = () => {
@@ -408,14 +417,19 @@ export function QuickViewModal({
                     <div className="product-slider-container">
                       <Swiper
                         modules={[Thumbs]}
-                        thumbs={{ swiper: thumbsSwiper && !thumbsSwiper.destroyed ? thumbsSwiper : null }}
+                        thumbs={{
+                          swiper:
+                            thumbsSwiper && !thumbsSwiper.destroyed
+                              ? thumbsSwiper
+                              : null,
+                        }}
                         className="product-single-carousel show-nav-hover"
                       >
                         {productImages.map((img, index) => {
                           const imageSrc = getImageSrc(img);
                           return (
                             <SwiperSlide key={index}>
-                              <div 
+                              <div
                                 className="product-image-zoom-container"
                                 onMouseEnter={() => setZoomActive(true)}
                                 onMouseLeave={() => {
@@ -424,35 +438,39 @@ export function QuickViewModal({
                                 }}
                                 onMouseMove={(e) => {
                                   const container = e.currentTarget;
-                                  const rect = container.getBoundingClientRect();
-                                  
+                                  const rect =
+                                    container.getBoundingClientRect();
+
                                   const x = e.clientX - rect.left;
                                   const y = e.clientY - rect.top;
-                                  
+
                                   // Calculate percentage position within the container
                                   const percentX = (x / rect.width) * 100;
                                   const percentY = (y / rect.height) * 100;
-                                  
-                                  setZoomPosition({ 
-                                    x: Math.max(0, Math.min(100, percentX)), 
-                                    y: Math.max(0, Math.min(100, percentY)) 
+
+                                  setZoomPosition({
+                                    x: Math.max(0, Math.min(100, percentX)),
+                                    y: Math.max(0, Math.min(100, percentY)),
                                   });
                                 }}
-                                style={{ borderRadius: "8px", overflow: "hidden" }}
+                                style={{
+                                  borderRadius: "8px",
+                                  overflow: "hidden",
+                                }}
                               >
                                 <img
-                                  className={`product-single-image ${zoomActive ? 'zoomed' : ''}`}
+                                  className={`product-single-image ${zoomActive ? "zoomed" : ""}`}
                                   src={imageSrc}
                                   alt={product.name || "Product"}
                                   onError={() => handleImageError(img)}
-                                  style={{ 
-                                    width: '100%', 
-                                    height: 'auto', 
-                                    display: 'block',
-                                    transform: zoomActive 
+                                  style={{
+                                    width: "100%",
+                                    height: "auto",
+                                    display: "block",
+                                    transform: zoomActive
                                       ? `scale(2.5) translate(${(50 - zoomPosition.x) * 0.6}%, ${(50 - zoomPosition.y) * 0.6}%)`
-                                      : 'scale(1)',
-                                    transformOrigin: 'center center',
+                                      : "scale(1)",
+                                    transformOrigin: "center center",
                                   }}
                                 />
                               </div>
@@ -460,7 +478,7 @@ export function QuickViewModal({
                           );
                         })}
                       </Swiper>
-                      
+
                       {productImages.length > 1 && (
                         <Swiper
                           onSwiper={setThumbsSwiper}
@@ -474,12 +492,18 @@ export function QuickViewModal({
                           {productImages.map((thumb, index) => {
                             const thumbSrc = getImageSrc(thumb);
                             return (
-                              <SwiperSlide key={index} className="product-thumbnail-slide">
+                              <SwiperSlide
+                                key={index}
+                                className="product-thumbnail-slide"
+                              >
                                 <img
                                   src={thumbSrc}
                                   alt={`Thumbnail ${index + 1}`}
                                   onError={() => handleImageError(thumb)}
-                                  style={{ borderRadius: "4px", cursor: "pointer" }}
+                                  style={{
+                                    borderRadius: "4px",
+                                    cursor: "pointer",
+                                  }}
                                 />
                               </SwiperSlide>
                             );
@@ -612,31 +636,29 @@ export function QuickViewModal({
                                   key={normalizedType}
                                   className="product-single-filter mb-2"
                                 >
-                                  <label className="d-block mb-1">
+                                  <label className="d-block mb-0 mr-1">
                                     {displayName}:
                                   </label>
                                   {isColorType ? (
                                     <div className="d-flex gap-2 flex-wrap">
                                       {Array.from(variantSet).map(
                                         (value: string) => {
-                                          const matchingVariants =
-                                            (product.variants ?? []).filter(
-                                              (v: any) => {
-                                                if (!v.attributes) return false;
-                                                const typeKey = Object.keys(
-                                                  v.attributes,
-                                                ).find(
-                                                  (k) =>
-                                                    k.toLowerCase() ===
-                                                    normalizedType,
-                                                );
-                                                return (
-                                                  typeKey &&
-                                                  v.attributes[typeKey] ===
-                                                    value
-                                                );
-                                              },
+                                          const matchingVariants = (
+                                            product.variants ?? []
+                                          ).filter((v: any) => {
+                                            if (!v.attributes) return false;
+                                            const typeKey = Object.keys(
+                                              v.attributes,
+                                            ).find(
+                                              (k) =>
+                                                k.toLowerCase() ===
+                                                normalizedType,
                                             );
+                                            return (
+                                              typeKey &&
+                                              v.attributes[typeKey] === value
+                                            );
+                                          });
                                           const isAvailable =
                                             matchingVariants.some(
                                               (v: any) =>
@@ -685,24 +707,22 @@ export function QuickViewModal({
                                     <div className="d-flex gap-2 flex-wrap">
                                       {Array.from(variantSet).map(
                                         (value: string) => {
-                                          const matchingVariants =
-                                            (product.variants ?? []).filter(
-                                              (v: any) => {
-                                                if (!v.attributes) return false;
-                                                const typeKey = Object.keys(
-                                                  v.attributes,
-                                                ).find(
-                                                  (k) =>
-                                                    k.toLowerCase() ===
-                                                    normalizedType,
-                                                );
-                                                return (
-                                                  typeKey &&
-                                                  v.attributes[typeKey] ===
-                                                    value
-                                                );
-                                              },
+                                          const matchingVariants = (
+                                            product.variants ?? []
+                                          ).filter((v: any) => {
+                                            if (!v.attributes) return false;
+                                            const typeKey = Object.keys(
+                                              v.attributes,
+                                            ).find(
+                                              (k) =>
+                                                k.toLowerCase() ===
+                                                normalizedType,
                                             );
+                                            return (
+                                              typeKey &&
+                                              v.attributes[typeKey] === value
+                                            );
+                                          });
                                           const isAvailable =
                                             matchingVariants.some(
                                               (v: any) =>
