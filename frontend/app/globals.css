@@ -44,15 +44,18 @@
   justify-content: center;
   background: rgba(255, 255, 255, 0.98);
 }
+
 .site-loader__inner {
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 1.5rem;
 }
+
 .site-loader__logo {
   flex-shrink: 0;
 }
+
 .site-loader__line-wrap {
   width: 200px;
   height: 4px;
@@ -60,21 +63,22 @@
   border-radius: 4px;
   overflow: hidden;
 }
+
 .site-loader__line {
   height: 100%;
   width: 40%;
-  background: linear-gradient(
-    90deg,
-    rgba(255, 168, 168, 1),
-    rgba(112, 14, 119, 1)
-  );
+  background: linear-gradient(90deg,
+      rgba(255, 168, 168, 1),
+      rgba(112, 14, 119, 1));
   border-radius: 4px;
   animation: site-loader-move 1.2s ease-in-out infinite;
 }
+
 @keyframes site-loader-move {
   0% {
     transform: translateX(-100%);
   }
+
   100% {
     transform: translateX(350%);
   }
@@ -88,6 +92,57 @@ body {
 /* Make appear-animate elements visible since we don't have the animation JS */
 .appear-animate {
   opacity: 1 !important;
+}
+
+/* Product detail: quantity input and Add to Cart same height */
+.product-detail-quantity-input,
+.product-detail-add-cart {
+  height: 42px !important;
+  min-height: 42px !important;
+  box-sizing: border-box;
+  display: inline-flex !important;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+  padding-top: 0;
+  padding-bottom: 0;
+}
+
+.product-detail-quantity-input {
+  width: 4.5rem;
+}
+
+.product-detail-add-cart {
+  padding-left: 1rem;
+  padding-right: 1rem;
+}
+
+/* Product detail: social share icons use Font Awesome - ensure all show */
+.product-single-share__label {
+  display: block;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #333;
+  margin-bottom: 0.5rem;
+}
+
+.product-single-share .social-icons {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.product-single-share .social-icons .social-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 3rem;
+  height: 3rem;
+  border-radius: 50%;
+}
+
+.product-single-share .social-icons .social-icon i {
+  font-size: 1.35rem;
 }
 
 /* Search Suggestions Styles */
@@ -1020,6 +1075,31 @@ ul.nav.product-filter-items .nav-item a,
 
 .prod-thumbnail .swiper-slide-thumb-active:hover {
   opacity: 1;
+}
+
+/* Product detail page: smaller product image */
+.product-single-container .product-slider-container .product-image-zoom-container {
+  max-height: 340px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  object-fit: cover;
+  background: #f8f8f8;
+}
+
+.product-single-container .product-slider-container .product-single-image {
+  max-height: 320px;
+  width: 100% !important;
+  max-width: 100% !important;
+  object-fit: cover;
+  display: block;
+  transition: transform 0.3s ease-out;
+  will-change: transform;
+}
+
+.product-single-container .prod-thumbnail .swiper-slide img {
+  max-height: 64px;
+  object-fit: cover;
 }
 
 /* Product Image Zoom Effect */
