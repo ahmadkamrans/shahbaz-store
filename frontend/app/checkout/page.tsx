@@ -21,7 +21,9 @@ export default function CheckoutPage() {
   const [couponOpen, setCouponOpen] = useState(false);
   const [createAccountOpen, setCreateAccountOpen] = useState(false);
   const [differentShippingOpen, setDifferentShippingOpen] = useState(false);
-  const [shippingMethod, setShippingMethod] = useState<"pickup" | "flat">("pickup");
+  const [shippingMethod, setShippingMethod] = useState<"pickup" | "flat">(
+    "pickup",
+  );
   const [submitting, setSubmitting] = useState(false);
   const [orderError, setOrderError] = useState("");
   const [discountCode, setDiscountCode] = useState("");
@@ -29,12 +31,12 @@ export default function CheckoutPage() {
   const [couponCode, setCouponCode] = useState("");
   const [couponError, setCouponError] = useState("");
   const [validatingCoupon, setValidatingCoupon] = useState(false);
-  
+
   // Billing address state
   const [billingCountry, setBillingCountry] = useState<string>("");
   const [billingState, setBillingState] = useState<string>("");
   const [billingCity, setBillingCity] = useState<string>("");
-  
+
   // Form field state for controlled inputs
   const [firstName, setFirstName] = useState<string>("");
   const [lastName, setLastName] = useState<string>("");
@@ -42,84 +44,86 @@ export default function CheckoutPage() {
   const [zip, setZip] = useState<string>("");
   const [phone, setPhone] = useState<string>("");
   const [email, setEmail] = useState<string>("");
-  
+
   // Shipping address state
   const [shippingCountry, setShippingCountry] = useState<string>("");
   const [shippingState, setShippingState] = useState<string>("");
   const [shippingCity, setShippingCity] = useState<string>("");
-  
+
   // Client-side only data to prevent hydration errors
   const [isMounted, setIsMounted] = useState(false);
   const [countries, setCountries] = useState<ICountry[]>([]);
-  
+
   // User profile data
   const [user, setUser] = useState<User | null>(null);
-  
+
   // Initialize countries on client side only
   useEffect(() => {
     setIsMounted(true);
     setCountries(Country.getAllCountries());
   }, []);
-  
+
   // Load user profile data
   useEffect(() => {
     const loadUserProfile = async () => {
       if (!getAuthToken() || !isMounted || countries.length === 0) {
         return;
       }
-      
+
       try {
         const userData = await authApi.getMe();
-        console.log('Loaded user profile:', userData);
+        console.log("Loaded user profile:", userData);
         setUser(userData);
-        
+
         // Pre-fill form fields with user data
         if (userData.name) {
-          const nameParts = userData.name.split(' ');
-          setFirstName(nameParts[0] || '');
-          setLastName(nameParts.slice(1).join(' ') || '');
+          const nameParts = userData.name.split(" ");
+          setFirstName(nameParts[0] || "");
+          setLastName(nameParts.slice(1).join(" ") || "");
         }
-        
+
         if (userData.email) {
           setEmail(userData.email);
         }
-        
+
         if (userData.phone) {
           setPhone(userData.phone);
         }
-        
+
         // Pre-fill billing address if available
         if (userData.address) {
           const address = userData.address;
-          console.log('Loading address from profile:', address);
-          
+          console.log("Loading address from profile:", address);
+
           if (address.street) {
             setStreet(address.street);
           }
-          
+
           if (address.zipCode) {
             setZip(address.zipCode);
           }
-          
+
           // Find country by name or ISO code
           if (address.country) {
             const country = countries.find(
-              c => c.name.toLowerCase() === address.country?.toLowerCase() ||
-                   c.isoCode.toLowerCase() === address.country?.toLowerCase()
+              (c) =>
+                c.name.toLowerCase() === address.country?.toLowerCase() ||
+                c.isoCode.toLowerCase() === address.country?.toLowerCase(),
             );
             if (country) {
               setBillingCountry(country.isoCode);
-              
+
               // Find state by name
               if (address.state && country) {
                 const states = State.getStatesOfCountry(country.isoCode);
                 const state = states.find(
-                  s => s.name.toLowerCase() === address.state?.toLowerCase() ||
-                       s.isoCode.toLowerCase() === address.state?.toLowerCase()
+                  (s) =>
+                    s.name.toLowerCase() === address.state?.toLowerCase() ||
+                    s.isoCode.toLowerCase() === address.state?.toLowerCase(),
                 );
                 if (state) {
                   setBillingState(state.isoCode);
-                  
+
                   // Find city
                   if (address.city) {
                     setBillingCity(address.city);
@@ -129,31 +133,37 @@ export default function CheckoutPage() {
             }
           }
         } else {
-          console.log('No address found in user profile');
+          console.log("No address found in user profile");
         }
       } catch (error) {
-        console.error('Failed to load user profile:', error);
+        console.error("Failed to load user profile:", error);
       }
     };
-    
+
     loadUserProfile();
   }, [isMounted, countries]);
-  
+
   // Get states based on selected country (only on client)
-  const billingStates = isMounted && billingCountry ? State.getStatesOfCountry(billingCountry) : [];
-  const shippingStates = isMounted && shippingCountry ? State.getStatesOfCountry(shippingCountry) : [];
-  
+  const billingStates =
+    isMounted && billingCountry ? State.getStatesOfCountry(billingCountry) : [];
+  const shippingStates =
+    isMounted && shippingCountry
+      ? State.getStatesOfCountry(shippingCountry)
+      : [];
+
   // Get cities based on selected country and state (only on client)
-  const billingCities = isMounted && billingCountry && billingState 
-    ? City.getCitiesOfState(billingCountry, billingState) 
-    : [];
-  const shippingCities = isMounted && shippingCountry && shippingState 
-    ? City.getCitiesOfState(shippingCountry, shippingState) 
-    : [];
+  const billingCities =
+    isMounted && billingCountry && billingState
+      ? City.getCitiesOfState(billingCountry, billingState)
+      : [];
+  const shippingCities =
+    isMounted && shippingCountry && shippingState
+      ? City.getCitiesOfState(shippingCountry, shippingState)
+      : [];
 
   useEffect(() => {
     if (!getAuthToken()) {
-      router.push('/login');
+      router.push("/login");
     }
   }, [router]);
 
@@ -161,34 +171,38 @@ export default function CheckoutPage() {
     if (!code.trim()) {
       setDiscountAmount(0);
       setDiscountCode("");
-      localStorage.removeItem('appliedDiscountCode');
+      localStorage.removeItem("appliedDiscountCode");
       return;
     }
 
     try {
       setValidatingCoupon(true);
       setCouponError("");
-      const result = await discountCodesApi.validateDiscountCode(code.trim(), subtotal);
-      
+      const result = await discountCodesApi.validateDiscountCode(
+        code.trim(),
+        subtotal,
+      );
+
       if (result.valid && result.discountAmount) {
         setDiscountAmount(result.discountAmount);
         setDiscountCode(code.trim().toUpperCase());
         setCouponError("");
-        localStorage.setItem('appliedDiscountCode', code.trim().toUpperCase());
+        localStorage.setItem("appliedDiscountCode", code.trim().toUpperCase());
       } else {
         setCouponError(result.message || "Invalid coupon code");
         setDiscountAmount(0);
         setDiscountCode("");
-        localStorage.removeItem('appliedDiscountCode');
+        localStorage.removeItem("appliedDiscountCode");
       }
     } catch (error: unknown) {
-      const errorMessage = error instanceof Error 
-        ? error.message 
-        : "Failed to validate coupon code";
+      const errorMessage =
+        error instanceof Error
+          ? error.message
+          : "Failed to validate coupon code";
       setCouponError(errorMessage);
       setDiscountAmount(0);
       setDiscountCode("");
-      localStorage.removeItem('appliedDiscountCode');
+      localStorage.removeItem("appliedDiscountCode");
     } finally {
       setValidatingCoupon(false);
     }
@@ -204,12 +218,12 @@ export default function CheckoutPage() {
     setDiscountCode("");
     setDiscountAmount(0);
     setCouponError("");
-    localStorage.removeItem('appliedDiscountCode');
+    localStorage.removeItem("appliedDiscountCode");
   };
 
   // Load and validate discount code when component mounts or subtotal changes
   useEffect(() => {
-    const savedDiscountCode = localStorage.getItem('appliedDiscountCode');
+    const savedDiscountCode = localStorage.getItem("appliedDiscountCode");
     if (savedDiscountCode && subtotal > 0) {
       setDiscountCode(savedDiscountCode);
       setCouponCode(savedDiscountCode);
@@ -220,7 +234,7 @@ export default function CheckoutPage() {
       setDiscountCode("");
       setCouponCode("");
       setDiscountAmount(0);
-      localStorage.removeItem('appliedDiscountCode');
+      localStorage.removeItem("appliedDiscountCode");
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [subtotal]);
@@ -230,11 +244,11 @@ export default function CheckoutPage() {
 
   const handlePlaceOrder = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    
+
     if (!getAuthToken()) {
       toast.error("Please login to place an order");
       setOrderError("Please login to place an order");
-      router.push('/login');
+      router.push("/login");
       return;
     }
 
@@ -246,7 +260,7 @@ export default function CheckoutPage() {
 
     // Get form element
     const form = e.currentTarget;
-    
+
     // Validate form
     if (!form.checkValidity()) {
       form.reportValidity();
@@ -260,35 +274,48 @@ export default function CheckoutPage() {
       setOrderError("");
 
       const formData = new FormData(form);
-      
+
       // Get country and state names from ISO codes
       const getCountryName = (isoCode: string) => {
         if (!isMounted || !isoCode) return isoCode;
-        const country = countries.find(c => c.isoCode === isoCode);
+        const country = countries.find((c) => c.isoCode === isoCode);
         return country?.name || isoCode;
       };
-      
+
       const getStateName = (countryCode: string, stateCode: string) => {
         if (!isMounted || !countryCode || !stateCode) return stateCode;
         const states = State.getStatesOfCountry(countryCode);
-        const state = states.find(s => s.isoCode === stateCode);
+        const state = states.find((s) => s.isoCode === stateCode);
         return state?.name || stateCode;
       };
-      
+
       // Validate and collect shipping address
-      const shippingAddress = differentShippingOpen ? {
-        street: (formData.get('shipping-street') as string)?.trim() || '',
-        city: shippingCity || (formData.get('shipping-city') as string)?.trim() || '',
-        state: shippingState ? getStateName(shippingCountry, shippingState) : (formData.get('shipping-state') as string)?.trim() || '',
-        zipCode: (formData.get('shipping-zip') as string)?.trim() || '',
-        country: shippingCountry ? getCountryName(shippingCountry) : (formData.get('shipping-country') as string)?.trim() || '',
-      } : {
-        street: (formData.get('street') as string)?.trim() || '',
-        city: billingCity || (formData.get('city') as string)?.trim() || '',
-        state: billingState ? getStateName(billingCountry, billingState) : (formData.get('state') as string)?.trim() || '',
-        zipCode: (formData.get('zip') as string)?.trim() || '',
-        country: billingCountry ? getCountryName(billingCountry) : (formData.get('country') as string)?.trim() || '',
-      };
+      const shippingAddress = differentShippingOpen
+        ? {
+            street: (formData.get("shipping-street") as string)?.trim() || "",
+            city:
+              shippingCity ||
+              (formData.get("shipping-city") as string)?.trim() ||
+              "",
+            state: shippingState
+              ? getStateName(shippingCountry, shippingState)
+              : (formData.get("shipping-state") as string)?.trim() || "",
+            zipCode: (formData.get("shipping-zip") as string)?.trim() || "",
+            country: shippingCountry
+              ? getCountryName(shippingCountry)
+              : (formData.get("shipping-country") as string)?.trim() || "",
+          }
+        : {
+            street: (formData.get("street") as string)?.trim() || "",
+            city: billingCity || (formData.get("city") as string)?.trim() || "",
+            state: billingState
+              ? getStateName(billingCountry, billingState)
+              : (formData.get("state") as string)?.trim() || "",
+            zipCode: (formData.get("zip") as string)?.trim() || "",
+            country: billingCountry
+              ? getCountryName(billingCountry)
+              : (formData.get("country") as string)?.trim() || "",
+          };
 
       // Validate that country and state are selected
       if (differentShippingOpen) {
@@ -308,7 +335,13 @@ export default function CheckoutPage() {
       }
 
       // Validate address fields
-      if (!shippingAddress.street || !shippingAddress.city || !shippingAddress.state || !shippingAddress.zipCode || !shippingAddress.country) {
+      if (
+        !shippingAddress.street ||
+        !shippingAddress.city ||
+        !shippingAddress.state ||
+        !shippingAddress.zipCode ||
+        !shippingAddress.country
+      ) {
         toast.error("Please fill in all required address fields");
         setOrderError("Please fill in all required address fields");
         setSubmitting(false);
@@ -316,7 +349,7 @@ export default function CheckoutPage() {
       }
 
       // Prepare order items
-      const orderItems = items.map(item => {
+      const orderItems = items.map((item) => {
         // Convert variant to the format expected by backend
         // Backend expects: { variantType: { value: variantValue } }
         let selectedVariant = undefined;
@@ -324,8 +357,10 @@ export default function CheckoutPage() {
           if (item.variant.attributes) {
             // Convert attributes Record<string, string> to { variantType: { value: variantValue } }
             const variantObj: Record<string, { value: string }> = {};
-            for (const [key, value] of Object.entries(item.variant.attributes)) {
-              if (value && typeof value === 'string') {
+            for (const [key, value] of Object.entries(
+              item.variant.attributes,
+            )) {
+              if (value && typeof value === "string") {
                 variantObj[key] = { value };
               }
             }
@@ -346,74 +381,80 @@ export default function CheckoutPage() {
       const orderData = {
         items: orderItems,
         shippingAddress,
-        discountCode: discountCode && discountCode.trim() ? discountCode.trim() : undefined,
+        discountCode:
+          discountCode && discountCode.trim() ? discountCode.trim() : undefined,
       };
 
-      console.log('Placing order with data:', orderData);
+      console.log("Placing order with data:", orderData);
 
       const order = await ordersApi.createOrder(orderData);
-      
-      console.log('Order created:', order);
-      
+
+      console.log("Order created:", order);
+
       // Save billing address to user profile for future checkouts
       try {
         const billingAddress = {
-          street: street.trim() || '',
-          city: billingCity.trim() || '',
-          state: billingState ? getStateName(billingCountry, billingState) : '',
-          zipCode: zip.trim() || '',
-          country: billingCountry ? getCountryName(billingCountry) : '',
+          street: street.trim() || "",
+          city: billingCity.trim() || "",
+          state: billingState ? getStateName(billingCountry, billingState) : "",
+          zipCode: zip.trim() || "",
+          country: billingCountry ? getCountryName(billingCountry) : "",
         };
-        
+
         // Also save name, email, and phone if provided
         const profileUpdate: Partial<User> = {
           address: billingAddress,
         };
-        
+
         if (firstName.trim() && lastName.trim()) {
           profileUpdate.name = `${firstName.trim()} ${lastName.trim()}`;
         }
-        
+
         if (email.trim()) {
           profileUpdate.email = email.trim();
         }
-        
+
         if (phone.trim()) {
           profileUpdate.phone = phone.trim();
         }
-        
+
         // Update user profile with checkout information
-        console.log('Saving profile update:', profileUpdate);
+        console.log("Saving profile update:", profileUpdate);
         const updatedUser = await authApi.updateProfile(profileUpdate);
-        console.log('Profile updated successfully:', updatedUser);
+        console.log("Profile updated successfully:", updatedUser);
         setUser(updatedUser); // Refresh user data
       } catch (error) {
         // Don't fail the order if profile update fails, just log it
-        console.error('Failed to save address to profile:', error);
+        console.error("Failed to save address to profile:", error);
       }
-      
+
       // Clear discount code from localStorage after successful order
-      localStorage.removeItem('appliedDiscountCode');
+      localStorage.removeItem("appliedDiscountCode");
       clearCart();
-      toast.success('Order placed successfully!', {
-        icon: '🎉',
+      toast.success("Order placed successfully!", {
+        icon: "🎉",
         duration: 4000,
       });
       router.push(`/orders/${order._id}`);
     } catch (error: unknown) {
-      console.error('Order placement error:', error);
-      const errorMessage = error instanceof Error 
-        ? error.message 
-        : (error as { response?: { data?: { message?: string } }; message?: string })?.response?.data?.message 
-          || (error as { message?: string })?.message 
-          || "Failed to place order. Please try again.";
+      console.error("Order placement error:", error);
+      const errorMessage =
+        error instanceof Error
+          ? error.message
+          : (
+              error as {
+                response?: { data?: { message?: string } };
+                message?: string;
+              }
+            )?.response?.data?.message ||
+            (error as { message?: string })?.message ||
+            "Failed to place order. Please try again.";
       toast.error(errorMessage);
       setOrderError(errorMessage);
     } finally {
       setSubmitting(false);
     }
   };
-
 
   return (
     <main className="main main-test">
@@ -436,11 +477,7 @@ export default function CheckoutPage() {
               <li>
                 <h2 className="step-title">Billing details</h2>
 
-                <form
-                  action="#"
-                  id="checkout-form"
-                  onSubmit={handlePlaceOrder}
-                >
+                <form action="#" id="checkout-form" onSubmit={handlePlaceOrder}>
                   <div className="row">
                     <div className="col-md-6">
                       <div className="form-group">
@@ -450,11 +487,11 @@ export default function CheckoutPage() {
                             *
                           </abbr>
                         </label>
-                        <input 
-                          type="text" 
-                          className="form-control" 
-                          name="firstName" 
-                          required 
+                        <input
+                          type="text"
+                          className="form-control"
+                          name="firstName"
+                          required
                           value={firstName}
                           onChange={(e) => setFirstName(e.target.value)}
                         />
@@ -469,11 +506,11 @@ export default function CheckoutPage() {
                             *
                           </abbr>
                         </label>
-                        <input 
-                          type="text" 
-                          className="form-control" 
-                          name="lastName" 
-                          required 
+                        <input
+                          type="text"
+                          className="form-control"
+                          name="lastName"
+                          required
                           value={lastName}
                           onChange={(e) => setLastName(e.target.value)}
                         />
@@ -493,9 +530,9 @@ export default function CheckoutPage() {
                         *
                       </abbr>
                     </label>
-                    <select 
-                      name="country" 
-                      className="form-control" 
+                    <select
+                      name="country"
+                      className="form-control"
                       required
                       value={billingCountry}
                       onChange={(e) => {
@@ -506,11 +543,12 @@ export default function CheckoutPage() {
                       suppressHydrationWarning
                     >
                       <option value="">Select Country</option>
-                      {isMounted && countries.map((country) => (
-                        <option key={country.isoCode} value={country.isoCode}>
-                          {country.name}
-                        </option>
-                      ))}
+                      {isMounted &&
+                        countries.map((country) => (
+                          <option key={country.isoCode} value={country.isoCode}>
+                            {country.name}
+                          </option>
+                        ))}
                     </select>
                   </div>
 
@@ -547,9 +585,9 @@ export default function CheckoutPage() {
                         *
                       </abbr>
                     </label>
-                    <select 
-                      name="state" 
-                      className="form-control" 
+                    <select
+                      name="state"
+                      className="form-control"
                       required
                       value={billingState}
                       onChange={(e) => {
@@ -560,15 +598,22 @@ export default function CheckoutPage() {
                       suppressHydrationWarning
                     >
                       <option value="">Select State / Province</option>
-                      {isMounted && billingStates.map((state) => (
-                        <option key={state.isoCode} value={state.isoCode}>
-                          {state.name}
-                        </option>
-                      ))}
+                      {isMounted &&
+                        billingStates.map((state) => (
+                          <option key={state.isoCode} value={state.isoCode}>
+                            {state.name}
+                          </option>
+                        ))}
                     </select>
                   </div>
 
-                  <div className={isMounted && billingCities.length > 0 ? "select-custom" : "form-group"}>
+                  <div
+                    className={
+                      isMounted && billingCities.length > 0
+                        ? "select-custom"
+                        : "form-group"
+                    }
+                  >
                     <label>
                       Town / City
                       <abbr className="required" title="required">
@@ -576,9 +621,9 @@ export default function CheckoutPage() {
                       </abbr>
                     </label>
                     {isMounted && billingCities.length > 0 ? (
-                      <select 
-                        name="city" 
-                        className="form-control" 
+                      <select
+                        name="city"
+                        className="form-control"
                         required
                         value={billingCity}
                         onChange={(e) => setBillingCity(e.target.value)}
@@ -587,17 +632,20 @@ export default function CheckoutPage() {
                       >
                         <option value="">Select City</option>
                         {billingCities.map((city, index) => (
-                          <option key={`${city.name}-${index}`} value={city.name}>
+                          <option
+                            key={`${city.name}-${index}`}
+                            value={city.name}
+                          >
                             {city.name}
                           </option>
                         ))}
                       </select>
                     ) : (
-                      <input 
-                        type="text" 
-                        className="form-control" 
-                        name="city" 
-                        required 
+                      <input
+                        type="text"
+                        className="form-control"
+                        name="city"
+                        required
                         value={billingCity}
                         onChange={(e) => setBillingCity(e.target.value)}
                         disabled={!isMounted || !billingState}
@@ -614,11 +662,11 @@ export default function CheckoutPage() {
                         *
                       </abbr>
                     </label>
-                    <input 
-                      type="text" 
-                      className="form-control" 
-                      name="zip" 
-                      required 
+                    <input
+                      type="text"
+                      className="form-control"
+                      name="zip"
+                      required
                       value={zip}
                       onChange={(e) => setZip(e.target.value)}
                     />
@@ -631,11 +679,11 @@ export default function CheckoutPage() {
                         *
                       </abbr>
                     </label>
-                    <input 
-                      type="tel" 
-                      className="form-control" 
+                    <input
+                      type="tel"
+                      className="form-control"
                       name="phone"
-                      required 
+                      required
                       value={phone}
                       onChange={(e) => setPhone(e.target.value)}
                     />
@@ -648,11 +696,11 @@ export default function CheckoutPage() {
                         *
                       </abbr>
                     </label>
-                    <input 
-                      type="email" 
-                      className="form-control" 
+                    <input
+                      type="email"
+                      className="form-control"
                       name="email"
-                      required 
+                      required
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
                     />
@@ -714,7 +762,10 @@ export default function CheckoutPage() {
                   </div> */}
 
                   {differentShippingOpen && (
-                    <div className="shipping-info" style={{ marginTop: '15px' }}>
+                    <div
+                      className="shipping-info"
+                      style={{ marginTop: "15px" }}
+                    >
                       <div className="row">
                         <div className="col-md-6">
                           <div className="form-group">
@@ -753,16 +804,20 @@ export default function CheckoutPage() {
 
                       <div className="form-group">
                         <label>Company name (optional)</label>
-                        <input type="text" className="form-control" name="shipping-company" />
+                        <input
+                          type="text"
+                          className="form-control"
+                          name="shipping-company"
+                        />
                       </div>
 
                       <div className="select-custom">
                         <label>
                           Country / Region <span className="required">*</span>
                         </label>
-                        <select 
-                          name="shipping-country" 
-                          className="form-control" 
+                        <select
+                          name="shipping-country"
+                          className="form-control"
                           required={differentShippingOpen}
                           value={shippingCountry}
                           onChange={(e) => {
@@ -774,11 +829,15 @@ export default function CheckoutPage() {
                           suppressHydrationWarning
                         >
                           <option value="">Select Country</option>
-                          {isMounted && countries.map((country) => (
-                            <option key={country.isoCode} value={country.isoCode}>
-                              {country.name}
-                            </option>
-                          ))}
+                          {isMounted &&
+                            countries.map((country) => (
+                              <option
+                                key={country.isoCode}
+                                value={country.isoCode}
+                              >
+                                {country.name}
+                              </option>
+                            ))}
                         </select>
                       </div>
 
@@ -814,9 +873,9 @@ export default function CheckoutPage() {
                             *
                           </abbr>
                         </label>
-                        <select 
-                          name="shipping-state" 
-                          className="form-control" 
+                        <select
+                          name="shipping-state"
+                          className="form-control"
                           required={differentShippingOpen}
                           value={shippingState}
                           onChange={(e) => {
@@ -827,15 +886,22 @@ export default function CheckoutPage() {
                           suppressHydrationWarning
                         >
                           <option value="">Select State / Province</option>
-                          {isMounted && shippingStates.map((state) => (
-                            <option key={state.isoCode} value={state.isoCode}>
-                              {state.name}
-                            </option>
-                          ))}
+                          {isMounted &&
+                            shippingStates.map((state) => (
+                              <option key={state.isoCode} value={state.isoCode}>
+                                {state.name}
+                              </option>
+                            ))}
                         </select>
                       </div>
 
-                      <div className={isMounted && shippingCities.length > 0 ? "select-custom" : "form-group"}>
+                      <div
+                        className={
+                          isMounted && shippingCities.length > 0
+                            ? "select-custom"
+                            : "form-group"
+                        }
+                      >
                         <label>
                           Town / City{" "}
                           <abbr className="required" title="required">
@@ -843,9 +909,9 @@ export default function CheckoutPage() {
                           </abbr>
                         </label>
                         {isMounted && shippingCities.length > 0 ? (
-                          <select 
-                            name="shipping-city" 
-                            className="form-control" 
+                          <select
+                            name="shipping-city"
+                            className="form-control"
                             required={differentShippingOpen}
                             value={shippingCity}
                             onChange={(e) => setShippingCity(e.target.value)}
@@ -854,16 +920,19 @@ export default function CheckoutPage() {
                           >
                             <option value="">Select City</option>
                             {shippingCities.map((city, index) => (
-                              <option key={`${city.name}-${index}`} value={city.name}>
+                              <option
+                                key={`${city.name}-${index}`}
+                                value={city.name}
+                              >
                                 {city.name}
                               </option>
                             ))}
                           </select>
                         ) : (
-                          <input 
-                            type="text" 
-                            className="form-control" 
-                            name="shipping-city" 
+                          <input
+                            type="text"
+                            className="form-control"
+                            name="shipping-city"
                             required={differentShippingOpen}
                             value={shippingCity}
                             onChange={(e) => setShippingCity(e.target.value)}
@@ -881,7 +950,12 @@ export default function CheckoutPage() {
                             *
                           </abbr>
                         </label>
-                        <input type="text" className="form-control" name="shipping-zip" required={differentShippingOpen} />
+                        <input
+                          type="text"
+                          className="form-control"
+                          name="shipping-zip"
+                          required={differentShippingOpen}
+                        />
                       </div>
                     </div>
                   )}
@@ -960,13 +1034,15 @@ export default function CheckoutPage() {
                             <div className="d-flex justify-content-between align-items-center">
                               <span className="text-success">
                                 <strong>Discount Code: {discountCode}</strong>
-                                <span className="ml-2">-{formatCurrency(discountAmount)}</span>
+                                <span className="ml-2">
+                                  -{formatCurrency(discountAmount)}
+                                </span>
                               </span>
                               <button
                                 type="button"
                                 onClick={handleRemoveCoupon}
                                 className="btn btn-sm btn-link text-danger p-0"
-                                style={{ fontSize: '0.875rem' }}
+                                style={{ fontSize: "0.875rem" }}
                               >
                                 Remove
                               </button>
@@ -977,7 +1053,7 @@ export default function CheckoutPage() {
                             <div className="input-group">
                               <input
                                 type="text"
-                                className="form-control form-control-sm"
+                                className="form-control form-control-sm w-100"
                                 placeholder="Coupon Code"
                                 value={couponCode}
                                 onChange={(e) => {
@@ -990,14 +1066,18 @@ export default function CheckoutPage() {
                                 <button
                                   className="btn btn-sm btn-dark"
                                   type="submit"
-                                  disabled={validatingCoupon || !couponCode.trim()}
+                                  disabled={
+                                    validatingCoupon || !couponCode.trim()
+                                  }
                                 >
                                   {validatingCoupon ? "..." : "Apply"}
                                 </button>
                               </div>
                             </div>
                             {couponError && (
-                              <div className="text-danger mt-1 small">{couponError}</div>
+                              <div className="text-danger mt-1 small">
+                                {couponError}
+                              </div>
                             )}
                           </form>
                         )}
@@ -1067,7 +1147,8 @@ export default function CheckoutPage() {
                 <h4>Payment methods</h4>
                 <div className="info-box with-icon p-0">
                   <p>
-                    <strong>Cash on Delivery</strong> - Payment will be collected when your order is delivered.
+                    <strong>Cash on Delivery</strong> - Payment will be
+                    collected when your order is delivered.
                   </p>
                 </div>
               </div>

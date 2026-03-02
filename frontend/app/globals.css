@@ -1350,3 +1350,18 @@ body.mmenu-active .sticky-navbar.fixed {
   background: rgba(255, 255, 255, 0.4);
   color: #fff;
 }
+
+/* Contact FAQ: left-align titles and ensure open content is visible */
+.contact-us-container .card.card-accordion .card-header {
+  text-align: left;
+  width: 100%;
+}
+.contact-us-container .card.card-accordion .accordion-panel {
+  padding: 0;
+  min-height: 0;
+}
+.contact-us-container .card.card-accordion .accordion-panel p {
+  padding: 1.3rem 0 0.4rem 0;
+  margin-bottom: 0;
+  letter-spacing: 0;
+}
