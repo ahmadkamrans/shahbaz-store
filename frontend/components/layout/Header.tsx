@@ -87,7 +87,15 @@ export function Header() {
             "linear-gradient(126deg, rgba(255, 168, 168, 1) 0%, rgba(112, 14, 119, 1) 36%, rgba(112, 14, 119, 1) 70%)",
         }}
       >
-        <div className="container" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'relative' }}>
+        <div
+          className="container"
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            position: "relative",
+          }}
+        >
           <div className="header-left pl-0">
             <Link href="/" className="logo">
               <Image
@@ -100,16 +108,28 @@ export function Header() {
             </Link>
           </div>
           {/* End .header-left */}
-          
-          <div className="header-center d-none d-lg-flex" style={{ 
-            position: 'absolute', 
-            left: '50%', 
-            transform: 'translateX(-50%)',
-            alignItems: 'center',
-            justifyContent: 'center'
-          }}>
+
+          <div
+            className="header-center d-none d-lg-flex"
+            style={{
+              position: "absolute",
+              left: "50%",
+              transform: "translateX(-50%)",
+              alignItems: "center",
+              justifyContent: "center",
+            }}
+          >
             <nav className="main-nav">
-              <ul className="menu" style={{ display: 'flex', listStyle: 'none', margin: 0, padding: 0, gap: '0.5rem' }}>
+              <ul
+                className="menu"
+                style={{
+                  display: "flex",
+                  listStyle: "none",
+                  margin: 0,
+                  padding: 0,
+                  gap: "0.5rem",
+                }}
+              >
                 {linksLoading ? (
                   <li>
                     <div className="text-white" style={{ padding: "8px 0px" }}>
@@ -167,7 +187,7 @@ export function Header() {
               className="mobile-menu-toggler text-dark d-lg-none"
               type="button"
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              style={{ marginLeft: '0.5rem' }}
+              style={{ marginLeft: "1.5rem" }}
               aria-label="Open menu"
             >
               <i className="fas fa-bars"></i>

@@ -12,6 +12,7 @@ import { formatPrice } from "@/lib/utils";
 import { categoriesApi } from "@/lib/api/categories";
 import { Category } from "@/types";
 import { useWishlist } from "@/lib/store/wishlist-store";
+import { ProductsFilterMenu } from "@/components/layout/ProductsFilterMenu";
 
 export default function ProductsPage() {
   const searchParams = useSearchParams();
@@ -30,30 +31,23 @@ export default function ProductsPage() {
   const [minPrice, setMinPrice] = useState(0);
   const [maxPrice, setMaxPrice] = useState(1000);
   const [topLevelCategories, setTopLevelCategories] = useState<Category[]>([]);
-  const [categoryChildren, setCategoryChildren] = useState<Record<string, Category[]>>({});
-  const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set());
+  const [categoryChildren, setCategoryChildren] = useState<
+    Record<string, Category[]>
+  >({});
+  const [expandedCategories, setExpandedCategories] = useState<Set<string>>(
+    new Set(),
+  );
 
   // Fetch wishlist on mount
   useEffect(() => {
     fetchWishlist();
   }, [fetchWishlist]);
 
-  // Mobile sidebar: body class for overlay
-  useEffect(() => {
-    if (typeof document === "undefined") return;
-    if (sidebarOpen) {
-      document.body.classList.add("sidebar-opened");
-    } else {
-      document.body.classList.remove("sidebar-opened");
-    }
-    return () => document.body.classList.remove("sidebar-opened");
-  }, [sidebarOpen]);
-
   // Read search and category query params from URL on mount and when they change
   useEffect(() => {
     const search = searchParams.get("search");
     const category = searchParams.get("category");
-    
+
     // If category is in URL, set it and clear search
     if (category) {
       setSelectedCategory(category);
@@ -61,7 +55,7 @@ export default function ProductsPage() {
     } else {
       setSelectedCategory(""); // Clear category when not in URL
     }
-    
+
     // If search is in URL (and no category), set it
     if (search && !category) {
       setSearchQuery(search);
@@ -100,7 +94,9 @@ export default function ProductsPage() {
       return;
     }
     try {
-      const subCats = await categoriesApi.getCategories(categoryId).catch(() => []);
+      const subCats = await categoriesApi
+        .getCategories(categoryId)
+        .catch(() => []);
       setCategoryChildren((prev) => ({
         ...prev,
         [categoryId]: Array.isArray(subCats) ? subCats : [],
@@ -123,12 +119,20 @@ export default function ProductsPage() {
   };
 
   // Recursive category item component
-  const CategoryItem = ({ category, level = 0 }: { category: Category; level?: number }) => {
+  const CategoryItem = ({
+    category,
+    level = 0,
+    onSelect,
+  }: {
+    category: Category;
+    level?: number;
+    onSelect?: () => void;
+  }) => {
     const subCategories = categoryChildren[category.id] || [];
     const hasChildren = subCategories.length > 0;
     const isExpanded = expandedCategories.has(category.id);
     const hasCheckedForChildren = categoryChildren.hasOwnProperty(category.id);
-    const marginLeft = level * 20;
+    const marginLeft = level * 10;
 
     return (
       <li>
@@ -163,8 +167,9 @@ export default function ProductsPage() {
             onClick={(e) => {
               e.preventDefault();
               setSelectedCategory(category.id);
-              setSearchQuery(""); // Clear search when category is selected
+              setSearchQuery("");
               setPage(1);
+              onSelect?.();
             }}
             style={{ flex: 1 }}
           >
@@ -172,9 +177,17 @@ export default function ProductsPage() {
           </a>
         </div>
         {isExpanded && hasChildren && (
-          <ul className="cat-list" style={{ marginLeft: `${marginLeft + 20}px`, marginTop: "5px" }}>
+          <ul
+            className="cat-list"
+            style={{ marginLeft: `${marginLeft + 1}px`, marginTop: "5px" }}
+          >
             {subCategories.map((subCat) => (
-              <CategoryItem key={subCat.id} category={subCat} level={level + 1} />
+              <CategoryItem
+                key={subCat.id}
+                category={subCat}
+                level={level + 1}
+                onSelect={onSelect}
+              />
             ))}
           </ul>
         )}
@@ -190,7 +203,15 @@ export default function ProductsPage() {
 
         const sortMap: Record<
           string,
-          { sortBy?: "createdAt" | "name" | "price" | "averageRating" | "viewCount"; sortOrder?: "asc" | "desc" }
+          {
+            sortBy?:
+              | "createdAt"
+              | "name"
+              | "price"
+              | "averageRating"
+              | "viewCount";
+            sortOrder?: "asc" | "desc";
+          }
         > = {
           menu_order: {},
           default: {},
@@ -237,384 +258,460 @@ export default function ProductsPage() {
     maxPrice,
   ]);
 
+  const renderFilterContent = (idSuffix: string, onCloseMenu?: () => void) => {
+    const handleCategoryAction = (fn: () => void) => {
+      fn();
+      onCloseMenu?.();
+    };
+    return (
+      <>
+        <div className="widget">
+          <h3 className="widget-title">
+            <a
+              href={`#widget-body-2${idSuffix}`}
+              role="button"
+              aria-expanded="true"
+              aria-controls={`widget-body-2${idSuffix}`}
+              onClick={(e) => {
+                e.preventDefault();
+                const target = document.getElementById(
+                  `widget-body-2${idSuffix}`,
+                );
+                if (target) target.classList.toggle("show");
+              }}
+            >
+              Categories
+            </a>
+          </h3>
+          <div
+            className="collapse show"
+            id={`widget-body-2${idSuffix}`}
+            style={{ display: "block" }}
+          >
+            <div className="widget-body">
+              <ul className="cat-list">
+                <li>
+                  <a
+                    href="#"
+                    className={selectedCategory === "" ? "active" : ""}
+                    onClick={(e) => {
+                      e.preventDefault();
+                      handleCategoryAction(() => {
+                        setSelectedCategory("");
+                        setSearchQuery("");
+                        setPage(1);
+                      });
+                    }}
+                  >
+                    All
+                  </a>
+                </li>
+                {topLevelCategories.length === 0 ? (
+                  <li>
+                    <span style={{ color: "#999", fontStyle: "italic" }}>
+                      No categories available
+                    </span>
+                  </li>
+                ) : (
+                  topLevelCategories.map((cat) => (
+                    <CategoryItem
+                      key={cat.id}
+                      category={cat}
+                      level={0}
+                      onSelect={onCloseMenu}
+                    />
+                  ))
+                )}
+              </ul>
+            </div>
+          </div>
+        </div>
+
+        <div className="widget widget-price">
+          <h3 className="widget-title">
+            <a
+              href={`#widget-body-3${idSuffix}`}
+              role="button"
+              aria-expanded="true"
+              aria-controls={`widget-body-3${idSuffix}`}
+              onClick={(e) => {
+                e.preventDefault();
+                const target = document.getElementById(
+                  `widget-body-3${idSuffix}`,
+                );
+                if (target) target.classList.toggle("show");
+              }}
+            >
+              Filter By Price
+            </a>
+          </h3>
+          <div
+            className="collapse show"
+            id={`widget-body-3${idSuffix}`}
+            style={{ display: "block" }}
+          >
+            <div className="widget-body">
+              <form
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  setPage(1);
+                  onCloseMenu?.();
+                }}
+              >
+                <div
+                  className="price-slider-wrapper"
+                  style={{ marginBottom: "15px" }}
+                >
+                  <ReactSlider
+                    className="price-range-slider"
+                    thumbClassName="price-slider-thumb"
+                    trackClassName="price-slider-track"
+                    value={[minPrice, maxPrice]}
+                    onChange={(values: number[]) => {
+                      setMinPrice(values[0]);
+                      setMaxPrice(values[1]);
+                      setPage(1);
+                    }}
+                    min={0}
+                    max={10000}
+                    step={1}
+                    pearling
+                    minDistance={10}
+                  />
+                </div>
+                <div className="filter-price-action d-flex align-items-center justify-content-between flex-wrap pb-0">
+                  <div className="filter-price-text mb-1 mb-xl-0">
+                    Price:{" "}
+                    <span className="mr-3">
+                      ${minPrice} - ${maxPrice}
+                    </span>
+                  </div>
+                  <div className="d-flex gap-2 mb-2">
+                    <input
+                      type="number"
+                      className="form-control form-control-sm"
+                      placeholder="Min"
+                      value={minPrice}
+                      onChange={(e) => {
+                        setMinPrice(Math.max(0, Number(e.target.value) || 0));
+                        setPage(1);
+                      }}
+                      min={0}
+                    />
+                    <input
+                      type="number"
+                      className="form-control form-control-sm"
+                      placeholder="Max"
+                      value={maxPrice}
+                      onChange={(e) => {
+                        setMaxPrice(
+                          Math.min(10000, Number(e.target.value) || 1000),
+                        );
+                        setPage(1);
+                      }}
+                      min={0}
+                      max={10000}
+                    />
+                  </div>
+                  <button
+                    type="submit"
+                    className="btn btn-primary font2 mb-1 mb-xl-0"
+                  >
+                    Filter
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      </>
+    );
+  };
+
   return (
     <>
-      <style dangerouslySetInnerHTML={{__html: `
+      <style
+        dangerouslySetInnerHTML={{
+          __html: `
         @media (min-width: 992px) {
-          .sidebar-shop.mobile-sidebar {
-            display: block !important;
-            position: relative !important;
-            transform: none !important;
-            visibility: visible !important;
-            opacity: 1 !important;
-            z-index: 1 !important;
-            width: 100% !important;
-            padding: 0 !important;
-            margin: 0 !important;
-            top: auto !important;
-            bottom: auto !important;
-            left: auto !important;
-            right: auto !important;
-            background-color: transparent !important;
-            overflow: visible !important;
-          }
-          .sidebar-shop .sidebar-wrapper,
-          .sidebar-shop .widget,
-          .sidebar-shop .widget-body,
-          .sidebar-shop #widget-body-2,
-          .sidebar-shop #widget-body-3 {
+          .main .sidebar-shop .sidebar-wrapper,
+          .main .sidebar-shop .widget,
+          .main .sidebar-shop .widget-body,
+          .main .sidebar-shop .price-slider-wrapper {
             display: block !important;
             visibility: visible !important;
             opacity: 1 !important;
-          }
-          .sidebar-shop .price-slider-wrapper {
-            display: block !important;
-            visibility: visible !important;
-            opacity: 1 !important;
-            min-height: 40px !important;
           }
         }
-      `}} />
-    <main className="main">
-      <div className="category-banner-container bg-gray">
-        <div
-          className="category-banner banner text-uppercase"
-          style={{
-            background:
-              "no-repeat 60%/cover url('/assets/images/banners/banner-top.jpg')",
-          }}
-        >
-          <div className="container position-relative">
-            <div className="row">
-              <div className="pl-lg-5 pb-5 pb-md-0 col-md-5 col-xl-4 col-lg-4 offset-1">
-                <h3>
-                  All<br></br>Products
-                </h3>
-                <Link href="/products" className="btn btn-dark">
-                  Shop Now
-                </Link>
-              </div>
-              <div className="pl-lg-3 col-md-4 offset-md-0 offset-1 pt-3">
-                <div className="coupon-sale-content">
-                  <h4 className="m-b-1 coupon-sale-text bg-white text-transform-none">
-                    Browse Collection
-                  </h4>
-                  <h5 className="mb-2 coupon-sale-text d-block ls-10 p-0">
-                    <i className="ls-0">Discover</i>
-                    <b className="text-dark"> great deals</b>
-                  </h5>
+      `,
+        }}
+      />
+      <main className="main">
+        <div className="category-banner-container bg-gray">
+          <div
+            className="category-banner banner text-uppercase"
+            style={{
+              background:
+                "no-repeat 60%/cover url('/assets/images/banners/banner-top.jpg')",
+            }}
+          >
+            <div className="container position-relative">
+              <div className="row">
+                <div className="pl-lg-5 pb-5 pb-md-0 col-md-5 col-xl-4 col-lg-4 offset-1">
+                  <h3>
+                    All<br></br>Products
+                  </h3>
+                  <Link href="/products" className="btn btn-dark">
+                    Shop Now
+                  </Link>
+                </div>
+                <div className="pl-lg-3 col-md-4 offset-md-0 offset-1 pt-3">
+                  <div className="coupon-sale-content">
+                    <h4 className="m-b-1 coupon-sale-text bg-white text-transform-none">
+                      Browse Collection
+                    </h4>
+                    <h5 className="mb-2 coupon-sale-text d-block ls-10 p-0">
+                      <i className="ls-0">Discover</i>
+                      <b className="text-dark"> great deals</b>
+                    </h5>
+                  </div>
                 </div>
               </div>
             </div>
           </div>
         </div>
-      </div>
 
-      <div className="container">
-        <nav aria-label="breadcrumb" className="breadcrumb-nav">
-          <ol className="breadcrumb">
-            <li className="breadcrumb-item">
-              <Link href="/">
-                <i className="icon-home"></i>
-              </Link>
-            </li>
-            {searchQuery && (
-              <>
-                <li className="breadcrumb-item">
-                  <Link href="/products">Products</Link>
-                </li>
-                <li className="breadcrumb-item active" aria-current="page">
-                  Search: "{searchQuery}"
-                </li>
-              </>
-            )}
-            {!searchQuery && selectedCategory && (
-              <>
-                <li className="breadcrumb-item">
-                  <Link href="/products">Products</Link>
-                </li>
-                <li className="breadcrumb-item active" aria-current="page">
-                  {topLevelCategories.find((c) => c.id === selectedCategory)?.name ||
-                    Object.values(categoryChildren).flat().find((c) => c.id === selectedCategory)?.name ||
-                    "Category"}
-                </li>
-              </>
-            )}
-            {!searchQuery && !selectedCategory && (
-              <li className="breadcrumb-item active" aria-current="page">
-                All Products
+        <div className="container">
+          <nav aria-label="breadcrumb" className="breadcrumb-nav">
+            <ol className="breadcrumb">
+              <li className="breadcrumb-item">
+                <Link href="/">
+                  <i className="icon-home"></i>
+                </Link>
               </li>
-            )}
-          </ol>
-        </nav>
+              {searchQuery && (
+                <>
+                  <li className="breadcrumb-item">
+                    <Link href="/products">Products</Link>
+                  </li>
+                  <li className="breadcrumb-item active" aria-current="page">
+                    Search: "{searchQuery}"
+                  </li>
+                </>
+              )}
+              {!searchQuery && selectedCategory && (
+                <>
+                  <li className="breadcrumb-item">
+                    <Link href="/products">Products</Link>
+                  </li>
+                  <li className="breadcrumb-item active" aria-current="page">
+                    {topLevelCategories.find((c) => c.id === selectedCategory)
+                      ?.name ||
+                      Object.values(categoryChildren)
+                        .flat()
+                        .find((c) => c.id === selectedCategory)?.name ||
+                      "Category"}
+                  </li>
+                </>
+              )}
+              {!searchQuery && !selectedCategory && (
+                <li className="breadcrumb-item active" aria-current="page">
+                  All Products
+                </li>
+              )}
+            </ol>
+          </nav>
 
-        {searchQuery && (
-          <div className="search-results-header mb-4">
-            <h2 className="mb-2">Search Results for "{searchQuery}"</h2>
-            <p className="text-muted">
-              {loading
-                ? "Searching..."
-                : `Found ${products.length} product${products.length !== 1 ? "s" : ""}`}
-            </p>
-          </div>
-        )}
+          {searchQuery && (
+            <div className="search-results-header mb-4">
+              <h2 className="mb-2">Search Results for "{searchQuery}"</h2>
+              <p className="text-muted">
+                {loading
+                  ? "Searching..."
+                  : `Found ${products.length} product${products.length !== 1 ? "s" : ""}`}
+              </p>
+            </div>
+          )}
 
-        <div className="row main-content-wrapper mb-2 pb-2">
-          <aside
-            className={`sidebar-shop col-lg-2 order-lg-first mobile-sidebar ${sidebarOpen ? "sidebar-opened" : ""}`}
-            style={{ 
-              display: "block",
-              position: "relative",
-              visibility: "visible",
-              opacity: 1,
-              transform: "none",
-              zIndex: 1
-            }}
-          >
-            <div className="sidebar-wrapper">
-              <div className="widget">
-                <h3 className="widget-title">
+          <div className="row main-content-wrapper mb-2 pb-2">
+            {/* Desktop sidebar: visible only on lg+ */}
+            <aside className="sidebar-shop col-lg-2 order-lg-first d-none d-lg-block">
+              <div className="sidebar-wrapper">
+                {renderFilterContent("", undefined)}
+              </div>
+            </aside>
+
+            <div className="col-lg-10">
+              <nav
+                className="toolbox sticky-header"
+                data-sticky-options="{'mobile': true}"
+              >
+                <div className="toolbox-left">
                   <a
-                    href="#widget-body-2"
-                    role="button"
-                    aria-expanded="true"
-                    aria-controls="widget-body-2"
+                    href="#"
+                    className="sidebar-toggle"
                     onClick={(e) => {
                       e.preventDefault();
-                      const target = document.getElementById("widget-body-2");
-                      if (target) {
-                        target.classList.toggle("show");
-                      }
+                      setSidebarOpen(!sidebarOpen);
                     }}
                   >
-                    Categories
+                    <svg
+                      data-name="Layer 3"
+                      id="Layer_3"
+                      viewBox="0 0 32 32"
+                      xmlns="http://www.w3.org/2000/svg"
+                    >
+                      <line
+                        x1="15"
+                        x2="26"
+                        y1="9"
+                        y2="9"
+                        className="cls-1"
+                      ></line>
+                      <line
+                        x1="6"
+                        x2="9"
+                        y1="9"
+                        y2="9"
+                        className="cls-1"
+                      ></line>
+                      <line
+                        x1="23"
+                        x2="26"
+                        y1="16"
+                        y2="16"
+                        className="cls-1"
+                      ></line>
+                      <line
+                        x1="6"
+                        x2="17"
+                        y1="16"
+                        y2="16"
+                        className="cls-1"
+                      ></line>
+                      <line
+                        x1="17"
+                        x2="26"
+                        y1="23"
+                        y2="23"
+                        className="cls-1"
+                      ></line>
+                      <line
+                        x1="6"
+                        x2="11"
+                        y1="23"
+                        y2="23"
+                        className="cls-1"
+                      ></line>
+                      <path
+                        d="M14.5,8.92A2.6,2.6,0,0,1,12,11.5,2.6,2.6,0,0,1,9.5,8.92a2.5,2.5,0,0,1,5,0Z"
+                        className="cls-2"
+                      ></path>
+                      <path
+                        d="M22.5,15.92a2.5,2.5,0,1,1-5,0,2.5,2.5,0,0,1,5,0Z"
+                        className="cls-2"
+                      ></path>
+                      <path
+                        d="M21,16a1,1,0,1,1-2,0,1,1,0,0,1,2,0Z"
+                        className="cls-3"
+                      ></path>
+                      <path
+                        d="M16.5,22.92A2.6,2.6,0,0,1,14,25.5a2.6,2.6,0,0,1-2.5-2.58,2.5,2.5,0,0,1,5,0Z"
+                        className="cls-2"
+                      ></path>
+                    </svg>
+                    <span>Filter</span>
                   </a>
-                </h3>
-                <div className="collapse show" id="widget-body-2" style={{ display: "block" }}>
-                  <div className="widget-body">
-                    <ul className="cat-list">
-                      <li>
-                        <a
-                          href="#"
-                          className={selectedCategory === "" ? "active" : ""}
-                          onClick={(e) => {
-                            e.preventDefault();
-                            setSelectedCategory("");
-                            setSearchQuery(""); // Clear search when "All" is selected
-                            setPage(1);
-                          }}
-                        >
-                          All
-                        </a>
-                      </li>
-                      {topLevelCategories.length === 0 ? (
-                        <li>
-                          <span style={{ color: "#999", fontStyle: "italic" }}>
-                            No categories available
-                          </span>
-                        </li>
-                      ) : (
-                        topLevelCategories.map((cat) => (
-                          <CategoryItem key={cat.id} category={cat} level={0} />
-                        ))
-                      )}
-                    </ul>
+                  <div className="toolbox-item toolbox-sort">
+                    <label>Sort By:</label>
+                    <div className="select-custom">
+                      <select
+                        name="orderby"
+                        className="form-control"
+                        value={sortBy}
+                        onChange={(e) => setSortBy(e.target.value)}
+                      >
+                        <option value="menu_order">Default sorting</option>
+                        <option value="popularity">Sort by popularity</option>
+                        <option value="rating">Sort by average rating</option>
+                        <option value="date">Sort by newness</option>
+                        <option value="price">
+                          Sort by price: low to high
+                        </option>
+                        <option value="price-desc">
+                          Sort by price: high to low
+                        </option>
+                      </select>
+                    </div>
                   </div>
                 </div>
-              </div>
 
-              <div className="widget widget-price">
-                <h3 className="widget-title">
-                  <a
-                    href="#widget-body-3"
-                    role="button"
-                    aria-expanded="true"
-                    aria-controls="widget-body-3"
-                    onClick={(e) => {
-                      e.preventDefault();
-                      const target = document.getElementById("widget-body-3");
-                      if (target) {
-                        target.classList.toggle("show");
-                      }
-                    }}
-                  >
-                    Filter By Price
-                  </a>
-                </h3>
-                <div className="collapse show" id="widget-body-3" style={{ display: "block" }}>
-                  <div className="widget-body">
-                    <form
-                      onSubmit={(e) => {
+                <div className="toolbox-right">
+                  <div className="toolbox-item toolbox-show">
+                    <label>Show:</label>
+                    <div className="select-custom">
+                      <select
+                        name="count"
+                        className="form-control"
+                        value={itemsPerPage}
+                        onChange={(e) => {
+                          setItemsPerPage(Number(e.target.value));
+                          setPage(1); // Reset to first page when changing items per page
+                        }}
+                      >
+                        <option value="12">12</option>
+                        <option value="24">24</option>
+                        <option value="36">36</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div className="toolbox-item layout-modes">
+                    <a
+                      href="#"
+                      className={`layout-btn btn-grid ${viewMode === "grid" ? "active" : ""}`}
+                      title="Grid"
+                      onClick={(e) => {
                         e.preventDefault();
-                        setPage(1);
+                        setViewMode("grid");
                       }}
                     >
-                      <div className="price-slider-wrapper" style={{ marginBottom: "15px" }}>
-                        <ReactSlider
-                          className="price-range-slider"
-                          thumbClassName="price-slider-thumb"
-                          trackClassName="price-slider-track"
-                          value={[minPrice, maxPrice]}
-                          onChange={(values: number[]) => {
-                            setMinPrice(values[0]);
-                            setMaxPrice(values[1]);
-                            setPage(1);
-                          }}
-                          min={0}
-                          max={10000}
-                          step={1}
-                          pearling
-                          minDistance={10}
-                        />
-                      </div>
-                      <div className="filter-price-action d-flex align-items-center justify-content-between flex-wrap pb-0">
-                        <div className="filter-price-text mb-1 mb-xl-0">
-                          Price:{" "}
-                          <span id="filter-price-range" className="mr-3">
-                            ${minPrice} - ${maxPrice}
-                          </span>
-                        </div>
-                        <div className="d-flex gap-2 mb-2">
-                          <input
-                            type="number"
-                            className="form-control form-control-sm"
-                            placeholder="Min"
-                            value={minPrice}
-                            onChange={(e) => {
-                              setMinPrice(
-                                Math.max(0, Number(e.target.value) || 0),
-                              );
-                              setPage(1);
-                            }}
-                            min={0}
-                          />
-                          <input
-                            type="number"
-                            className="form-control form-control-sm"
-                            placeholder="Max"
-                            value={maxPrice}
-                            onChange={(e) => {
-                              setMaxPrice(
-                                Math.min(10000, Number(e.target.value) || 1000),
-                              );
-                              setPage(1);
-                            }}
-                            min={0}
-                            max={10000}
-                          />
-                        </div>
-                        <button
-                          type="submit"
-                          className="btn btn-primary font2 mb-1 mb-xl-0"
-                        >
-                          Filter
-                        </button>
-                      </div>
-                    </form>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </aside>
-
-          <div className="col-lg-10">
-            <nav
-              className="toolbox sticky-header"
-              data-sticky-options="{'mobile': true}"
-            >
-              <div className="toolbox-left">
-                <a
-                  href="#"
-                  className="sidebar-toggle"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    setSidebarOpen(!sidebarOpen);
-                  }}
-                >
-                  <svg
-                    data-name="Layer 3"
-                    id="Layer_3"
-                    viewBox="0 0 32 32"
-                    xmlns="http://www.w3.org/2000/svg"
-                  >
-                    <line
-                      x1="15"
-                      x2="26"
-                      y1="9"
-                      y2="9"
-                      className="cls-1"
-                    ></line>
-                    <line x1="6" x2="9" y1="9" y2="9" className="cls-1"></line>
-                    <line
-                      x1="23"
-                      x2="26"
-                      y1="16"
-                      y2="16"
-                      className="cls-1"
-                    ></line>
-                    <line
-                      x1="6"
-                      x2="17"
-                      y1="16"
-                      y2="16"
-                      className="cls-1"
-                    ></line>
-                    <line
-                      x1="17"
-                      x2="26"
-                      y1="23"
-                      y2="23"
-                      className="cls-1"
-                    ></line>
-                    <line
-                      x1="6"
-                      x2="11"
-                      y1="23"
-                      y2="23"
-                      className="cls-1"
-                    ></line>
-                    <path
-                      d="M14.5,8.92A2.6,2.6,0,0,1,12,11.5,2.6,2.6,0,0,1,9.5,8.92a2.5,2.5,0,0,1,5,0Z"
-                      className="cls-2"
-                    ></path>
-                    <path
-                      d="M22.5,15.92a2.5,2.5,0,1,1-5,0,2.5,2.5,0,0,1,5,0Z"
-                      className="cls-2"
-                    ></path>
-                    <path
-                      d="M21,16a1,1,0,1,1-2,0,1,1,0,0,1,2,0Z"
-                      className="cls-3"
-                    ></path>
-                    <path
-                      d="M16.5,22.92A2.6,2.6,0,0,1,14,25.5a2.6,2.6,0,0,1-2.5-2.58,2.5,2.5,0,0,1,5,0Z"
-                      className="cls-2"
-                    ></path>
-                  </svg>
-                  <span>Filter</span>
-                </a>
-                <div className="toolbox-item toolbox-sort">
-                  <label>Sort By:</label>
-                  <div className="select-custom">
-                    <select
-                      name="orderby"
-                      className="form-control"
-                      value={sortBy}
-                      onChange={(e) => setSortBy(e.target.value)}
+                      <i className="icon-mode-grid"></i>
+                    </a>
+                    <a
+                      href="#"
+                      className={`layout-btn btn-list ${viewMode === "list" ? "active" : ""}`}
+                      title="List"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        setViewMode("list");
+                      }}
                     >
-                      <option value="menu_order">Default sorting</option>
-                      <option value="popularity">Sort by popularity</option>
-                      <option value="rating">Sort by average rating</option>
-                      <option value="date">Sort by newness</option>
-                      <option value="price">Sort by price: low to high</option>
-                      <option value="price-desc">
-                        Sort by price: high to low
-                      </option>
-                    </select>
+                      <i className="icon-mode-list"></i>
+                    </a>
                   </div>
                 </div>
+              </nav>
+
+              <div className="row products-body">
+                {loading ? (
+                  <div className="col-12 text-center py-5">
+                    <p>Loading products...</p>
+                  </div>
+                ) : products.length === 0 ? (
+                  <div className="col-12 text-center py-5">
+                    <p>No products found.</p>
+                  </div>
+                ) : (
+                  <ProductGrid
+                    products={products}
+                    viewMode={viewMode}
+                    columnClass="col-6 col-md-4 col-lg-3 col-xl-5col"
+                  />
+                )}
               </div>
 
-              <div className="toolbox-right">
+              <nav className="toolbox toolbox-pagination font2">
                 <div className="toolbox-item toolbox-show">
                   <label>Show:</label>
                   <div className="select-custom">
@@ -624,7 +721,7 @@ export default function ProductsPage() {
                       value={itemsPerPage}
                       onChange={(e) => {
                         setItemsPerPage(Number(e.target.value));
-                        setPage(1); // Reset to first page when changing items per page
+                        setPage(1);
                       }}
                     >
                       <option value="12">12</option>
@@ -633,135 +730,71 @@ export default function ProductsPage() {
                     </select>
                   </div>
                 </div>
-
-                <div className="toolbox-item layout-modes">
-                  <a
-                    href="#"
-                    className={`layout-btn btn-grid ${viewMode === "grid" ? "active" : ""}`}
-                    title="Grid"
-                    onClick={(e) => {
-                      e.preventDefault();
-                      setViewMode("grid");
-                    }}
-                  >
-                    <i className="icon-mode-grid"></i>
-                  </a>
-                  <a
-                    href="#"
-                    className={`layout-btn btn-list ${viewMode === "list" ? "active" : ""}`}
-                    title="List"
-                    onClick={(e) => {
-                      e.preventDefault();
-                      setViewMode("list");
-                    }}
-                  >
-                    <i className="icon-mode-list"></i>
-                  </a>
-                </div>
-              </div>
-            </nav>
-
-            <div className="row products-body">
-              {loading ? (
-                <div className="col-12 text-center py-5">
-                  <p>Loading products...</p>
-                </div>
-              ) : products.length === 0 ? (
-                <div className="col-12 text-center py-5">
-                  <p>No products found.</p>
-                </div>
-              ) : (
-                <ProductGrid
-                  products={products}
-                  viewMode={viewMode}
-                  columnClass="col-6 col-md-4 col-lg-3 col-xl-5col"
-                />
-              )}
-            </div>
-
-            <nav className="toolbox toolbox-pagination font2">
-              <div className="toolbox-item toolbox-show">
-                <label>Show:</label>
-                <div className="select-custom">
-                  <select
-                    name="count"
-                    className="form-control"
-                    value={itemsPerPage}
-                    onChange={(e) => {
-                      setItemsPerPage(Number(e.target.value));
-                      setPage(1);
-                    }}
-                  >
-                    <option value="12">12</option>
-                    <option value="24">24</option>
-                    <option value="36">36</option>
-                  </select>
-                </div>
-              </div>
-              <ul className="pagination toolbox-item">
-                <li className={`page-item ${page <= 1 ? "disabled" : ""}`}>
-                  <a
-                    className="page-link page-link-btn"
-                    href="#"
-                    onClick={(e) => {
-                      e.preventDefault();
-                      if (page > 1) setPage(page - 1);
-                    }}
-                  >
-                    <i className="icon-angle-left"></i>
-                  </a>
-                </li>
-                {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-                  const pageNum =
-                    Math.max(1, Math.min(totalPages - 4, page - 2)) + i;
-                  if (pageNum > totalPages) return null;
-                  return (
-                    <li
-                      key={pageNum}
-                      className={`page-item ${pageNum === page ? "active" : ""}`}
+                <ul className="pagination toolbox-item">
+                  <li className={`page-item ${page <= 1 ? "disabled" : ""}`}>
+                    <a
+                      className="page-link page-link-btn"
+                      href="#"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        if (page > 1) setPage(page - 1);
+                      }}
                     >
-                      <a
-                        className="page-link"
-                        href="#"
-                        onClick={(e) => {
-                          e.preventDefault();
-                          setPage(pageNum);
-                        }}
+                      <i className="icon-angle-left"></i>
+                    </a>
+                  </li>
+                  {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                    const pageNum =
+                      Math.max(1, Math.min(totalPages - 4, page - 2)) + i;
+                    if (pageNum > totalPages) return null;
+                    return (
+                      <li
+                        key={pageNum}
+                        className={`page-item ${pageNum === page ? "active" : ""}`}
                       >
-                        {pageNum}{" "}
-                        {pageNum === page && (
-                          <span className="sr-only">(current)</span>
-                        )}
-                      </a>
-                    </li>
-                  );
-                })}
-                <li
-                  className={`page-item ${page >= totalPages ? "disabled" : ""}`}
-                >
-                  <a
-                    className="page-link page-link-btn"
-                    href="#"
-                    onClick={(e) => {
-                      e.preventDefault();
-                      if (page < totalPages) setPage(page + 1);
-                    }}
+                        <a
+                          className="page-link"
+                          href="#"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            setPage(pageNum);
+                          }}
+                        >
+                          {pageNum}{" "}
+                          {pageNum === page && (
+                            <span className="sr-only">(current)</span>
+                          )}
+                        </a>
+                      </li>
+                    );
+                  })}
+                  <li
+                    className={`page-item ${page >= totalPages ? "disabled" : ""}`}
                   >
-                    <i className="icon-angle-right"></i>
-                  </a>
-                </li>
-              </ul>
-            </nav>
+                    <a
+                      className="page-link page-link-btn"
+                      href="#"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        if (page < totalPages) setPage(page + 1);
+                      }}
+                    >
+                      <i className="icon-angle-right"></i>
+                    </a>
+                  </li>
+                </ul>
+              </nav>
+            </div>
           </div>
-        </div>
 
-        <div
-          className="sidebar-overlay"
-          onClick={() => setSidebarOpen(false)}
-          aria-hidden="true"
-        />
-      </div>
-    </main>
+          <ProductsFilterMenu
+            isOpen={sidebarOpen}
+            onClose={() => setSidebarOpen(false)}
+          >
+            {renderFilterContent("-mobile", () => setSidebarOpen(false))}
+          </ProductsFilterMenu>
+        </div>
+      </main>
     </>
   );
 }

@@ -13506,7 +13506,7 @@ footer .contact-info-label {
 
 @media (max-width:575px) {
     footer {
-        margin-bottom: 68px
+        margin-bottom: 0px !important;
     }
 
     #scroll-top {

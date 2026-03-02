@@ -13453,7 +13453,7 @@ footer .contact-info-label {
 
 @media (max-width:575px) {
     footer {
-        margin-bottom: 68px
+        margin-bottom: 0px !important;
     }
 
     #scroll-top {
@@ -17779,7 +17779,14 @@ aside .widget-info i {
     align-items: center;
     justify-content: center;
     padding: 1.4rem 0;
-    background-color: rgba(251, 242, 232, 0.7)
+    background-color: rgba(251, 242, 232, 0.7);
+    margin-top: 50px !important;
+}
+
+@media (max-width: 768px) {
+    .header-bottom {
+        margin-top: 37px !important;
+    }
 }
 
 .header-bottom a,

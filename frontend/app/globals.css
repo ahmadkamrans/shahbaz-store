@@ -875,7 +875,7 @@ ul.nav.product-filter-items .nav-item a,
     position: absolute !important;
     box-sizing: border-box !important;
     z-index: 2 !important;
-    margin-left: -8px !important;
+    margin-left: 0px !important;
   }
 
   .price-slider-thumb:hover {
@@ -1074,4 +1074,153 @@ body.mmenu-active .sticky-header.fixed,
 body.mmenu-active .sticky-navbar.fixed {
   left: 0 !important;
   transform: none !important;
+}
+
+/* Products page: mobile filter menu (same pattern as MobileMenu) */
+.products-filter-overlay {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  background: #000;
+  opacity: 0.35;
+  z-index: 9998;
+  transition: opacity 0.25s;
+}
+
+.products-filter-container {
+  position: fixed;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  max-width: 300px;
+  z-index: 9999;
+  transform: translateX(-100%);
+  transition: transform 0.25s;
+  overflow-y: auto;
+  color: #fff;
+}
+
+.products-filter-container.products-filter-container--open {
+  transform: translateX(0);
+}
+
+.products-filter-close {
+  position: absolute;
+  top: 1.2rem;
+  right: 1.5rem;
+  padding: 0.4rem;
+  color: #fff;
+  line-height: 1;
+  cursor: pointer;
+  z-index: 9;
+  font-size: 1.3rem;
+}
+
+.products-filter-wrapper {
+  position: relative;
+  padding: 4rem 1.5rem 2rem;
+}
+
+/* Force filter panel content visible on mobile (theme hides .collapse / .widget-body below 992px) */
+.products-filter-content .widget,
+.products-filter-content .widget-body,
+.products-filter-content .collapse,
+.products-filter-content .collapse.show,
+.products-filter-content .price-slider-wrapper {
+  display: block !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+}
+
+.products-filter-content .price-slider-wrapper {
+  min-height: 40px !important;
+  height: auto !important;
+  padding: 12px 8px !important;
+  margin: 10px 0 !important;
+  position: relative !important;
+  overflow: visible !important;
+}
+
+/* Price slider in filter panel - must be visible on mobile (theme only styles it at 992px+) */
+.products-filter-content .price-range-slider {
+  width: 100% !important;
+  height: 16px !important;
+  position: relative !important;
+  margin: 0 !important;
+  display: block !important;
+}
+
+.products-filter-content .price-range-slider .price-slider-track {
+  height: 16px !important;
+  background: #e0e0e0 !important;
+  border-radius: 8px !important;
+  top: 0 !important;
+  position: absolute !important;
+  margin: 0 !important;
+}
+
+.products-filter-content .price-range-slider .price-slider-track.price-slider-track-0,
+.products-filter-content .price-range-slider .price-slider-track.price-slider-track-2 {
+  background: #e0e0e0 !important;
+  height: 16px !important;
+  border-radius: 8px !important;
+  z-index: 0 !important;
+}
+
+.products-filter-content .price-range-slider .price-slider-track.price-slider-track-1 {
+  background: #700e77 !important;
+  border-radius: 8px !important;
+  height: 16px !important;
+  z-index: 1 !important;
+}
+
+.products-filter-content .price-slider-thumb {
+  width: 16px !important;
+  height: 16px !important;
+  border-radius: 50% !important;
+  background: #700e77 !important;
+  border: 2px solid #fff !important;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2) !important;
+  cursor: pointer !important;
+  top: 50% !important;
+  transform: translateY(-50%) !important;
+  margin-top: 0 !important;
+  outline: none !important;
+  position: absolute !important;
+  box-sizing: border-box !important;
+  z-index: 2 !important;
+  margin-left: 0px !important;
+}
+
+.products-filter-content .widget-title,
+.products-filter-content .widget-title a,
+.products-filter-content .cat-list a,
+.products-filter-content .filter-price-text,
+.products-filter-content label {
+  color: #fff !important;
+}
+
+.products-filter-content .cat-list li a:hover,
+.products-filter-content .cat-list li a.active {
+  color: rgba(255, 255, 255, 0.9) !important;
+}
+
+.products-filter-content .form-control {
+  background: rgba(255, 255, 255, 0.2);
+  border-color: rgba(255, 255, 255, 0.4);
+  color: #fff;
+}
+
+.products-filter-content .btn-primary {
+  background: rgba(255, 255, 255, 0.3);
+  border-color: rgba(255, 255, 255, 0.5);
+  color: #fff;
+}
+
+.products-filter-content .btn-primary:hover {
+  background: rgba(255, 255, 255, 0.4);
+  color: #fff;
 }
