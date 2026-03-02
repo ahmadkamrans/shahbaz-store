@@ -434,6 +434,7 @@ body {
 .header-middle .menu a {
   color: #fff !important;
   padding: 8px 15px !important;
+  white-space: nowrap !important;
 }
 
 .header .main-nav .menu>li:hover>a {
@@ -749,6 +750,7 @@ ul.nav.product-filter-items .nav-item a,
 /* Products page sidebar: ensure visibility on desktop */
 /* Override all mobile sidebar styles on desktop */
 @media (min-width: 992px) {
+
   /* Make sidebar visible on desktop - very specific selectors with highest priority */
   .main-content-wrapper .col-lg-2.sidebar-shop.mobile-sidebar,
   .row.main-content-wrapper .col-lg-2.sidebar-shop.mobile-sidebar,
@@ -997,7 +999,7 @@ ul.nav.product-filter-items .nav-item a,
   .product-image-zoom-container {
     cursor: default;
   }
-  
+
   .product-image-zoom-container .product-single-image.zoomed {
     transform: scale(1) !important;
   }
@@ -1017,4 +1019,59 @@ ul.nav.product-filter-items .nav-item a,
 .header-search-wrapper .btn[type="submit"]:hover {
   background: #5a0b5f !important;
   background-color: #5a0b5f !important;
+}
+
+/* Mobile menu with same bg as header: white text and controls */
+.mobile-menu-container--header-bg .mobile-menu-close,
+.mobile-menu-container--header-bg .mobile-nav a,
+.mobile-menu-container--header-bg .mobile-nav .mobile-menu a,
+.mobile-menu-container--header-bg .mobile-menu-wrapper {
+  color: #fff !important;
+}
+
+.mobile-menu-container--header-bg .mobile-nav a:hover,
+.mobile-menu-container--header-bg .mobile-nav .mobile-menu a:hover {
+  color: rgba(255, 255, 255, 0.9) !important;
+}
+
+.mobile-menu-container--header-bg .mobile-nav .mobile-menu li,
+.mobile-menu-container--header-bg .mobile-nav .mobile-menu li a {
+  border-color: #fff !important;
+}
+
+.mobile-menu-container--header-bg .search-wrapper .form-control {
+  background: rgba(255, 255, 255, 0.2) !important;
+  border-color: rgba(255, 255, 255, 0.4) !important;
+  color: #fff !important;
+}
+
+.mobile-menu-container--header-bg .search-wrapper .form-control::placeholder {
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.mobile-menu-container--header-bg .search-wrapper .btn {
+  color: #fff !important;
+}
+
+.mobile-menu-container--header-bg .mobile-menu-icons .header-icon {
+  color: #fff !important;
+  font-size: 1.25rem;
+}
+
+.mobile-menu-container--header-bg .mobile-menu-icons .header-icon:hover {
+  color: rgba(255, 255, 255, 0.9) !important;
+}
+
+.mobile-menu-container--header-bg .mobile-menu-icons .header-icon.position-relative .badge-circle {
+  top: -4px;
+  right: -6px;
+  left: auto;
+}
+
+/* Keep page in place when mobile menu is open (no push/slide) */
+body.mmenu-active .page-wrapper,
+body.mmenu-active .sticky-header.fixed,
+body.mmenu-active .sticky-navbar.fixed {
+  left: 0 !important;
+  transform: none !important;
 }

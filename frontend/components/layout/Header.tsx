@@ -67,6 +67,17 @@ export function Header() {
     return () => document.body.classList.remove("cart-opened");
   }, [cartOpen]);
 
+  // Sync body class so theme CSS shows mobile menu overlay and slide-in panel
+  useEffect(() => {
+    if (typeof document === "undefined") return;
+    if (mobileMenuOpen) {
+      document.body.classList.add("mmenu-active");
+    } else {
+      document.body.classList.remove("mmenu-active");
+    }
+    return () => document.body.classList.remove("mmenu-active");
+  }, [mobileMenuOpen]);
+
   return (
     <header className="header mb-2">
       <div
@@ -90,22 +101,13 @@ export function Header() {
           </div>
           {/* End .header-left */}
           
-          <div className="header-center" style={{ 
+          <div className="header-center d-none d-lg-flex" style={{ 
             position: 'absolute', 
             left: '50%', 
             transform: 'translateX(-50%)',
-            display: 'flex',
             alignItems: 'center',
             justifyContent: 'center'
           }}>
-            <button
-              className="mobile-menu-toggler text-dark mr-2 d-lg-none"
-              type="button"
-              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              style={{ position: 'absolute', left: '-50px' }}
-            >
-              <i className="fas fa-bars"></i>
-            </button>
             <nav className="main-nav">
               <ul className="menu" style={{ display: 'flex', listStyle: 'none', margin: 0, padding: 0, gap: '0.5rem' }}>
                 {linksLoading ? (
@@ -141,15 +143,7 @@ export function Header() {
             </nav>
           </div>
 
-          <div className="header-right">
-            <button
-              className="mobile-menu-toggler text-dark d-lg-none"
-              type="button"
-              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              style={{ marginRight: '0.5rem' }}
-            >
-              <i className="fas fa-bars"></i>
-            </button>
+          <div className="header-right d-flex align-items-center">
             <Link href="/login" className="header-icon" title="Login">
               <i className="icon-user-2"></i>
             </Link>
@@ -168,6 +162,16 @@ export function Header() {
             </Link>
 
             <Cart isOpen={cartOpen} onToggle={() => setCartOpen(!cartOpen)} />
+
+            <button
+              className="mobile-menu-toggler text-dark d-lg-none"
+              type="button"
+              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+              style={{ marginLeft: '0.5rem' }}
+              aria-label="Open menu"
+            >
+              <i className="fas fa-bars"></i>
+            </button>
           </div>
           {/* End .header-right */}
         </div>
