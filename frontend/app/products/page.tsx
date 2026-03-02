@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
@@ -15,7 +15,7 @@ import { useWishlist } from "@/lib/store/wishlist-store";
 import { useSiteLoading } from "@/lib/loading-context";
 import { ProductsFilterMenu } from "@/components/layout/ProductsFilterMenu";
 
-export default function ProductsPage() {
+function ProductsPageContent() {
   const searchParams = useSearchParams();
   const { fetchWishlist } = useWishlist();
   const { setLoading: setSiteLoading } = useSiteLoading();
@@ -796,5 +796,25 @@ export default function ProductsPage() {
         </div>
       </main>
     </>
+  );
+}
+
+function ProductsPageFallback() {
+  return (
+    <main className="main">
+      <div className="container py-5">
+        <div className="text-center py-5">
+          <p className="mb-0">Loading products...</p>
+        </div>
+      </div>
+    </main>
+  );
+}
+
+export default function ProductsPage() {
+  return (
+    <Suspense fallback={<ProductsPageFallback />}>
+      <ProductsPageContent />
+    </Suspense>
   );
 }

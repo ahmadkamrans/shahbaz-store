@@ -126,7 +126,7 @@ export function QuickViewModal({
     }
 
     // Find variants that match all selected variant types
-    const matchingVariants = product.variants.filter((v: any) => {
+    const matchingVariants = (product.variants ?? []).filter((v: any) => {
       if (!v.attributes) return false;
       // Check if variant matches all selected variant types
       return Object.entries(selectedVariants).every(([type, value]) => {
@@ -179,7 +179,7 @@ export function QuickViewModal({
       // If no exact match, calculate from individual variant selections
       Object.entries(selectedVariants).forEach(([type, value]) => {
         if (!value) return;
-        const typeVariants = product.variants.filter((v: any) => {
+        const typeVariants = (product.variants ?? []).filter((v: any) => {
           if (!v.attributes) return false;
           const typeKey = Object.keys(v.attributes).find(
             (k) => k.toLowerCase() === type,
@@ -250,7 +250,7 @@ export function QuickViewModal({
       if (hasVariants) {
         // Get all variant types dynamically (case insensitive)
         const variantGroups: Record<string, Set<string>> = {};
-        product.variants.forEach((v: any) => {
+        (product.variants ?? []).forEach((v: any) => {
           if (v.attributes) {
             Object.entries(v.attributes).forEach(([key, value]) => {
               const normalizedKey = key.toLowerCase();
@@ -271,7 +271,7 @@ export function QuickViewModal({
         if (missingVariants.length > 0) {
           const missingNames = missingVariants.map((type) => {
             // Find original casing from product variants
-            const variant = product.variants.find((v: any) => {
+            const variant = (product.variants ?? []).find((v: any) => {
               if (!v.attributes) return false;
               return Object.keys(v.attributes).some(
                 (k) => k.toLowerCase() === type,
@@ -303,7 +303,7 @@ export function QuickViewModal({
         Object.entries(selectedVariants).forEach(([type, value]) => {
           if (value) {
             // Find the original key casing from product variants
-            const variant = product.variants?.find((v: any) => {
+            const variant = (product.variants ?? []).find((v: any) => {
               if (!v.attributes) return false;
               const typeKey = Object.keys(v.attributes).find(
                 (k) => k.toLowerCase() === type,
@@ -539,7 +539,7 @@ export function QuickViewModal({
                           string,
                           { values: Set<string>; originalKey: string }
                         > = {};
-                        product.variants.forEach((v: any) => {
+                        (product.variants ?? []).forEach((v: any) => {
                           if (v.attributes) {
                             Object.entries(v.attributes).forEach(
                               ([key, value]) => {
@@ -620,7 +620,7 @@ export function QuickViewModal({
                                       {Array.from(variantSet).map(
                                         (value: string) => {
                                           const matchingVariants =
-                                            product.variants.filter(
+                                            (product.variants ?? []).filter(
                                               (v: any) => {
                                                 if (!v.attributes) return false;
                                                 const typeKey = Object.keys(
@@ -686,7 +686,7 @@ export function QuickViewModal({
                                       {Array.from(variantSet).map(
                                         (value: string) => {
                                           const matchingVariants =
-                                            product.variants.filter(
+                                            (product.variants ?? []).filter(
                                               (v: any) => {
                                                 if (!v.attributes) return false;
                                                 const typeKey = Object.keys(
