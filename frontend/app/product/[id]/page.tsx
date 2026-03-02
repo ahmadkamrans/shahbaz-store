@@ -14,6 +14,7 @@ import { Product } from '@/types';
 import { formatPrice } from '@/lib/utils';
 import { useCart } from '@/lib/store/cart-store';
 import { useWishlist } from '@/lib/store/wishlist-store';
+import { useSiteLoading } from '@/lib/loading-context';
 import { productsApi } from '@/lib/api/products';
 import { reviewsApi, Review } from '@/lib/api/reviews';
 import { getAuthToken } from '@/lib/api/config';
