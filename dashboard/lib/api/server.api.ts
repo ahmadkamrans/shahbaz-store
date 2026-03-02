@@ -50,6 +50,12 @@ export const serverApi = {
     getAll: async () => fetchAPI('/categories'),
     getById: async (id: string) => fetchAPI(`/categories/${id}`),
   },
+  settings: {
+    get: async () => {
+      const response = await fetchAPI('/settings');
+      return response.settings || null;
+    },
+  },
 };
 
 // Server-side API client with authentication (for use in Server Components)

@@ -37,17 +37,36 @@ const orderSchema = new mongoose.Schema({
     type: Number,
     default: 0
   },
+  deliveryCharges: {
+    type: Number,
+    default: 0
+  },
   status: {
     type: String,
     enum: ['pending', 'confirmed', 'shipped', 'delivered', 'cancelled'],
     default: 'pending'
   },
-  shippingAddress: {
+  billingAddress: {
+    firstName: String,
+    lastName: String,
     street: String,
     city: String,
     state: String,
     zipCode: String,
-    country: String
+    country: String,
+    phone: String,
+    email: String
+  },
+  shippingAddress: {
+    firstName: String,
+    lastName: String,
+    street: String,
+    city: String,
+    state: String,
+    zipCode: String,
+    country: String,
+    phone: String,
+    email: String
   }
 }, {
   timestamps: true

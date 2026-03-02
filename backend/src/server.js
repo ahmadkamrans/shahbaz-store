@@ -15,6 +15,7 @@ import wishlistRoutes from './routes/wishlist.js';
 import orderRoutes from './routes/orders.js';
 import discountCodeRoutes from './routes/discountCodes.js';
 import headerLinkRoutes from './routes/headerLinks.js';
+import settingsRoutes from './routes/settings.js';
 import analyticsRoutes from './routes/analytics.js';
 import uploadRoutes from './routes/upload.js';
 
@@ -113,6 +114,7 @@ app.use('/api/wishlist', wishlistRoutes);
 app.use('/api/orders', orderRoutes);
 app.use('/api/discount-codes', discountCodeRoutes);
 app.use('/api/header-links', headerLinkRoutes);
+app.use('/api/settings', settingsRoutes);
 app.use('/api/analytics', analyticsRoutes);
 app.use('/api/upload', uploadRoutes);
 

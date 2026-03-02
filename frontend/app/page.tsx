@@ -6,30 +6,32 @@ import Image from "next/image";
 import { HomeBanner } from "@/components/banners/HomeBanner";
 import { ProductCarousel } from "@/components/product/ProductCarousel";
 import { QuickViewModal } from "@/components/product/QuickViewModal";
+import { ProductCollections } from "@/components/product/ProductCollections";
 import { Product } from "@/types";
 import { productsApi } from "@/lib/api/products";
 import { categoriesApi } from "@/lib/api/categories";
+import { Category } from "@/types";
 import { useWishlist } from "@/lib/store/wishlist-store";
 import { useCart } from "@/lib/store/cart-store";
 import { useSiteLoading } from "@/lib/loading-context";
 import { formatCurrency } from "@/lib/utils/currency";
-
-const tabs = ["kitchen", "dining", "bedroom", "living", "office", "outdoor"];
+import { settingsApi, Settings } from "@/lib/api/settings";
 
 export default function HomePage() {
   const { addItem: addToWishlist, removeItem, isInWishlist, fetchWishlist } = useWishlist();
   const { addItem: addToCart } = useCart();
+  const [categories, setCategories] = useState<Category[]>([]);
   const { setLoading: setSiteLoading } = useSiteLoading();
-  const [activeTab, setActiveTab] = useState("kitchen");
+  const [activeTab, setActiveTab] = useState<string>("");
   const [featuredProducts, setFeaturedProducts] = useState<
     Record<string, Product[]>
   >({});
-  const [allProducts, setAllProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
-  const [categoryMap, setCategoryMap] = useState<Record<string, string>>({});
+  const [categoryIdsByTab, setCategoryIdsByTab] = useState<Record<string, string>>({});
   const [quickViewProduct, setQuickViewProduct] = useState<Product | null>(
     null,
   );
+  const [settings, setSettings] = useState<Settings | null>(null);
 
   const handleToggleWishlist = async (
     e: React.MouseEvent,
@@ -52,79 +54,63 @@ export default function HomePage() {
     fetchWishlist();
   }, [fetchWishlist]);
 
+  // Fetch settings to check banner status
+  useEffect(() => {
+    const fetchSettings = async () => {
+      try {
+        const siteSettings = await settingsApi.get();
+        setSettings(siteSettings);
+      } catch (error) {
+        console.error("Error fetching settings:", error);
+        setSettings(null);
+      }
+    };
+
+    fetchSettings();
+  }, []);
+
   useEffect(() => {
     const fetchData = async () => {
       try {
         setLoading(true);
         setSiteLoading(true);
 
-        // Fetch categories to map tab names to category IDs
-        const categories = await categoriesApi.getCategories();
-        const map: Record<string, string> = {};
+        // Fetch categories dynamically
+        const fetchedCategories = await categoriesApi.getCategories();
+        // Filter only top-level categories (no parent)
+        const topLevelCategories = fetchedCategories.filter(cat => !cat.parentId);
+        setCategories(topLevelCategories);
 
-        // Create mapping from category names/slugs to IDs
-        categories.forEach((category) => {
-          const lowerName = category.name.toLowerCase().trim();
-          const lowerSlug = (category.slug || "").toLowerCase().trim();
-          map[lowerName] = category.id;
-          if (lowerSlug) {
-            map[lowerSlug] = category.id;
-          }
-        });
+        // Set first category as active tab
+        if (topLevelCategories.length > 0) {
+          const firstCategorySlug = topLevelCategories[0].slug || topLevelCategories[0].id;
+          setActiveTab(firstCategorySlug);
+        }
 
-        setCategoryMap(map);
-
-        // Fetch products for each category tab
+        // Fetch products for each category
         const productsByCategory: Record<string, Product[]> = {};
+        const categoryIdsByTab: Record<string, string> = {};
 
-        for (const tab of tabs) {
-          const categoryId = map[tab];
+        for (const category of topLevelCategories) {
+          const tabKey = category.slug || category.id;
+          
+          try {
+            // Get products from this category
+            const result = await productsApi.getProducts({
+              category: category.id,
+              limit: 20,
+            });
 
-          if (categoryId) {
-            try {
-              // Get products from this category
-              const result = await productsApi.getProducts({
-                category: categoryId,
-                limit: 5,
-              });
-
-              productsByCategory[tab] = result.products || [];
-            } catch (error) {
-              console.error(`Failed to fetch products for ${tab}:`, error);
-              productsByCategory[tab] = [];
-            }
-          } else {
-            // If no category found, try to find by name match
-            const matchedCategory = categories.find(
-              (cat) => cat.name.toLowerCase().trim() === tab,
-            );
-            if (matchedCategory) {
-              try {
-                const result = await productsApi.getProducts({
-                  category: matchedCategory.id,
-                  limit: 5,
-                });
-                productsByCategory[tab] = result.products || [];
-              } catch (error) {
-                console.error(
-                  `Failed to fetch products for ${tab} (fallback):`,
-                  error,
-                );
-                productsByCategory[tab] = [];
-              }
-            } else {
-              productsByCategory[tab] = [];
-            }
+            productsByCategory[tabKey] = result.products || [];
+            categoryIdsByTab[tabKey] = category.id;
+          } catch (error) {
+            console.error(`Failed to fetch products for ${category.name}:`, error);
+            productsByCategory[tabKey] = [];
           }
         }
 
         setFeaturedProducts(productsByCategory);
-
-        // Fetch all products for grid
-        const all = await productsApi.getProducts({
-          limit: 12,
-        });
-        setAllProducts(all.products);
+        setCategoryIdsByTab(categoryIdsByTab);
       } catch (error) {
         console.error("Failed to fetch data:", error);
       } finally {
@@ -137,7 +123,7 @@ export default function HomePage() {
   }, []);
 
   return (
-    <main className="home main">
+    <main className={`home main ${!settings?.banner?.isActive ? 'mt-10' : ''}`}>
       <div className="container">
         <section>
           <div className="row grid">
@@ -263,42 +249,58 @@ export default function HomePage() {
         <hr className="mt-0" />
 
         <section className="featured-section product-slider-tab appear-animate">
-          <div className="heading d-flex align-items-center flex-column flex-lg-row">
-            <div className="section-title">
-              <h2 className="mt-1 mb-1">FEATURED PRODUCTS</h2>
-            </div>
-            <ul className="nav product-filter-items ml-lg-auto justify-content-center mb-0">
-              {tabs.map((tab) => (
-                <li key={tab} className="nav-item product-filter-item">
-                  <a
-                    href="#"
-                    className={`nav-link ${activeTab === tab ? "active" : ""}`}
-                    onClick={(e) => {
-                      e.preventDefault();
-                      setActiveTab(tab);
-                    }}
-                    style={{ cursor: 'pointer', userSelect: 'none' }}
-                  >
-                    {tab.charAt(0).toUpperCase() + tab.slice(1).toUpperCase()}
-                  </a>
-                </li>
-              ))}
+          <div className="heading d-flex align-items-center justify-content-center mt-5 mb-5" style={{ overflowX: 'auto', width: '100%' }}>
+            <ul className="nav product-filter-items mb-0" style={{ display: 'flex', flexWrap: 'nowrap', gap: '1.5rem', padding: '0 1rem' }}>
+              {categories.map((category) => {
+                const tabKey = category.slug || category.id;
+                return (
+                  <li key={category.id} className="nav-item product-filter-item" style={{ flexShrink: 0 }}>
+                    <a
+                      href="#"
+                      className={`nav-link ${activeTab === tabKey ? "active" : ""}`}
+                      onClick={(e) => {
+                        e.preventDefault();
+                        setActiveTab(tabKey);
+                      }}
+                      style={{ cursor: 'pointer', userSelect: 'none', fontSize: '2rem', fontWeight: '600', whiteSpace: 'nowrap' }}
+                    >
+                      {category.name.toUpperCase()}
+                    </a>
+                  </li>
+                );
+              })}
             </ul>
           </div>
 
           <div className="tab-content">
-            {loading ? null : (
-              tabs.map((tab) => {
-                const products = featuredProducts[tab] || [];
+            {loading ? (
+              <div className="text-center py-5">
+                <p>Loading products...</p>
+              </div>
+            ) : (
+              categories.map((category) => {
+                const tabKey = category.slug || category.id;
+                const products = featuredProducts[tabKey] || [];
+                const categoryId = categoryIdsByTab[tabKey];
                 return (
                   <div
-                    key={tab}
+                    key={category.id}
                     className={`tab-pane fade ${
-                      activeTab === tab ? "show active" : ""
+                      activeTab === tabKey ? "show active" : ""
                     }`}
                   >
                     {products.length > 0 ? (
-                      <ProductCarousel products={products} />
+                      <>
+                        <ProductCarousel products={products} />
+                        {categoryId && (
+                          <Link 
+                            href={`/products?category=${categoryId}`}
+                            className="btn with-icon align-center font2"
+                          >
+                            Browse All<i className="fas fa-long-arrow-alt-right"></i>
+                          </Link>
+                        )}
+                      </>
                     ) : (
                       <div className="text-center py-5">
                         <p>No featured products available for this category.</p>
@@ -312,105 +314,7 @@ export default function HomePage() {
         </section>
       </div>
 
-      <section>
-        <div className="container">
-          <div className="featured-section bg-white appear-animate">
-            {loading ? null : (
-              <div className="row">
-                {allProducts.map((product) => (
-                  <div
-                    key={product.id}
-                    className="col-6 col-md-4 col-lg-3 col-xl-2"
-                  >
-                    <div className="product-default inner-quickview inner-icon">
-                      <figure>
-                        <Link href={`/product/${product.slug}`}>
-                          <Image
-                            src={product.image}
-                            alt={product.name}
-                            width={257}
-                            height={257}
-                          />
-                        </Link>
-                        <div className="btn-icon-group">
-                          <a
-                            href="#"
-                            className="btn-icon btn-add-cart product-type-simple"
-                            onClick={(e) => {
-                              e.preventDefault();
-                              addToCart(product);
-                            }}
-                          >
-                            <i className="icon-shopping-cart"></i>
-                          </a>
-                        </div>
-                        <a
-                          href="#"
-                          className="btn-quickview"
-                          title="Quick View"
-                          onClick={(e) => {
-                            e.preventDefault();
-                            setQuickViewProduct(product);
-                          }}
-                        >
-                          Quick View
-                        </a>
-                      </figure>
-                      <div className="product-details">
-                        <div className="category-wrap">
-                          <div className="category-list">
-                            <Link href="/products" className="product-category">
-                              {product.category}
-                            </Link>
-                          </div>
-                          <a
-                            href="#"
-                            title={
-                              isInWishlist(product.id)
-                                ? "Remove from Wishlist"
-                                : "Add to Wishlist"
-                            }
-                            className={`btn-icon-wish ${isInWishlist(product.id) ? "added-wishlist" : ""}`}
-                            onClick={(e) => handleToggleWishlist(e, product)}
-                          >
-                            <i className="icon-heart"></i>
-                          </a>
-                        </div>
-                        <h3 className="product-title">
-                          <Link href={`/product/${product.slug}`}>
-                            {product.name}
-                          </Link>
-                        </h3>
-                        <div className="ratings-container">
-                          <div className="product-ratings">
-                            <span
-                              className="ratings"
-                              style={{
-                                width: `${(product.rating || 0) * 20}%`,
-                              }}
-                            ></span>
-                            <span className="tooltiptext tooltip-top"></span>
-                          </div>
-                        </div>
-                        <div className="price-box">
-                          <span className="product-price">
-                            {formatCurrency(product.price)}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-            <Link href="/products" className="btn with-icon align-center font2">
-              Browse All<i className="fas fa-long-arrow-alt-right"></i>
-            </Link>
-          </div>
-
-          <hr />
-        </div>
-      </section>
+      <ProductCollections categoryId={categoryIdsByTab[activeTab]} />
 
       <QuickViewModal
         product={quickViewProduct}

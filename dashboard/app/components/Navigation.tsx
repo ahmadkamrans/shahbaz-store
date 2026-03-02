@@ -11,6 +11,7 @@ import {
   FaStar,
   FaPercent,
   FaLink,
+  FaCog,
 } from "react-icons/fa";
 
 const navigation = [
@@ -21,6 +22,7 @@ const navigation = [
   { name: "Reviews", href: "/reviews", icon: FaStar },
   { name: "Discount Codes", href: "/discount-codes", icon: FaPercent },
   { name: "Header Links", href: "/header-links", icon: FaLink },
+  { name: "Settings", href: "/settings", icon: FaCog },
 ];
 
 export default function Navigation() {

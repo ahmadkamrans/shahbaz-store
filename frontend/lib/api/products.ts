@@ -216,4 +216,17 @@ export const productsApi = {
     const data = await parseResponse<{ products: BackendProduct[] }>(response);
     return data.products.map(transformProduct);
   },
+
+  getCollections: async (type: 'featured' | 'bestSelling' | 'latest' | 'topRated', categoryId?: string, limit: number = 4): Promise<Product[]> => {
+    const params = new URLSearchParams();
+    params.append('type', type);
+    if (categoryId) {
+      params.append('category', categoryId);
+    }
+    params.append('limit', String(limit));
+    
+    const response = await apiFetch(`/api/products/collections?${params.toString()}`);
+    const data = await parseResponse<{ success: boolean; products: BackendProduct[] }>(response);
+    return data.products.map(transformProduct);
+  },
 };

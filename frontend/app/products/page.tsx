@@ -1,11 +1,12 @@
 "use client";
 
-import { useState, useEffect, Suspense } from "react";
+import { useState, useEffect, useRef, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
 import ReactSlider from "react-slider";
 import { ProductGrid } from "@/components/product/ProductGrid";
+import { ProductCollections } from "@/components/product/ProductCollections";
 import { Product } from "@/types";
 import { productsApi } from "@/lib/api/products";
 import { formatPrice } from "@/lib/utils";
@@ -28,17 +29,19 @@ function ProductsPageContent() {
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
-  const [itemsPerPage, setItemsPerPage] = useState(24);
+  const [itemsPerPage, setItemsPerPage] = useState(20);
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [hasMore, setHasMore] = useState(true);
+  const observerTarget = useRef<HTMLDivElement>(null);
   const [minPrice, setMinPrice] = useState(0);
   const [maxPrice, setMaxPrice] = useState(1000);
   const [topLevelCategories, setTopLevelCategories] = useState<Category[]>([]);
-  const [categoryChildren, setCategoryChildren] = useState<
-    Record<string, Category[]>
-  >({});
-  const [expandedCategories, setExpandedCategories] = useState<Set<string>>(
-    new Set(),
-  );
+  const [categoryChildren, setCategoryChildren] = useState<Record<string, Category[]>>({});
+  const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set());
+  const [randomCategoryId, setRandomCategoryId] = useState<string | null>(null);
+  const [categoriesExpanded, setCategoriesExpanded] = useState(true);
+  const [priceFilterExpanded, setPriceFilterExpanded] = useState(true);
 
   // Fetch wishlist on mount
   useEffect(() => {
@@ -76,6 +79,12 @@ function ProductsPageContent() {
         const categoriesArray = Array.isArray(cats) ? cats : [];
         console.log("Setting topLevelCategories:", categoriesArray);
         setTopLevelCategories(categoriesArray);
+        
+        // Get random category for collections when no category is selected
+        if (categoriesArray.length > 0) {
+          const randomIndex = Math.floor(Math.random() * categoriesArray.length);
+          setRandomCategoryId(categoriesArray[randomIndex].id);
+        }
       } catch (error) {
         console.error("Failed to fetch categories:", error);
         setTopLevelCategories([]);
@@ -89,6 +98,45 @@ function ProductsPageContent() {
     console.log("topLevelCategories state updated:", topLevelCategories);
   }, [topLevelCategories]);
 
+  // Recursively fetch all sub-categories at any depth
+  const fetchAllSubCategories = async (
+    categoryId: string,
+    processingIds: Set<string> = new Set(),
+    addedIds: Map<string, Category> = new Map(),
+    rootCategoryId: string
+  ): Promise<Category[]> => {
+    try {
+      // Prevent infinite loops
+      if (processingIds.has(categoryId)) {
+        return [];
+      }
+      processingIds.add(categoryId);
+
+      const directSubCats = await categoriesApi.getCategories(categoryId).catch(() => []);
+      
+      if (!Array.isArray(directSubCats)) {
+        return [];
+      }
+      
+      // Process direct sub-categories
+      for (const cat of directSubCats) {
+        // Skip root category and already added categories
+        if (cat.id !== rootCategoryId && !addedIds.has(cat.id)) {
+          addedIds.set(cat.id, cat);
+          
+          // Recursively fetch sub-categories of this category
+          await fetchAllSubCategories(cat.id, processingIds, addedIds, rootCategoryId);
+        }
+      }
+      
+      // Return all unique categories as an array
+      return Array.from(addedIds.values());
+    } catch (error) {
+      console.error(`Failed to fetch sub-categories for ${categoryId}:`, error);
+      return [];
+    }
+  };
+
   // Fetch sub-categories when a category is expanded (recursive support)
   const fetchSubCategories = async (categoryId: string) => {
     if (categoryChildren[categoryId]) {
@@ -96,12 +144,19 @@ function ProductsPageContent() {
       return;
     }
     try {
-      const subCats = await categoriesApi
-        .getCategories(categoryId)
-        .catch(() => []);
+      const allSubCats = await fetchAllSubCategories(categoryId, new Set(), new Map(), categoryId);
+      // Use Map to ensure absolute uniqueness, then convert to array
+      const uniqueMap = new Map<string, Category>();
+      for (const cat of allSubCats) {
+        if (!uniqueMap.has(cat.id)) {
+          uniqueMap.set(cat.id, cat);
+        }
+      }
+      const uniqueSubCats = Array.from(uniqueMap.values());
+      
       setCategoryChildren((prev) => ({
         ...prev,
-        [categoryId]: Array.isArray(subCats) ? subCats : [],
+        [categoryId]: uniqueSubCats,
       }));
     } catch (error) {
       console.error(`Failed to fetch sub-categories for ${categoryId}:`, error);
@@ -120,21 +175,12 @@ function ProductsPageContent() {
     setExpandedCategories(newExpanded);
   };
 
-  // Recursive category item component
-  const CategoryItem = ({
-    category,
-    level = 0,
-    onSelect,
-  }: {
-    category: Category;
-    level?: number;
-    onSelect?: () => void;
-  }) => {
+  // Category item component - all sub-categories shown at same level
+  const CategoryItem = ({ category }: { category: Category }) => {
     const subCategories = categoryChildren[category.id] || [];
     const hasChildren = subCategories.length > 0;
     const isExpanded = expandedCategories.has(category.id);
     const hasCheckedForChildren = categoryChildren.hasOwnProperty(category.id);
-    const marginLeft = level * 10;
 
     return (
       <li>
@@ -168,40 +214,71 @@ function ProductsPageContent() {
             className={selectedCategory === category.id ? "active" : ""}
             onClick={(e) => {
               e.preventDefault();
-              setSelectedCategory(category.id);
-              setSearchQuery("");
-              setPage(1);
-              onSelect?.();
+              // Always toggle expansion (will fetch children if not already fetched)
+              // Skip toggle only if we've confirmed there are no children
+              if (hasCheckedForChildren && !hasChildren) {
+                // No children, just select the category
+                setSelectedCategory(category.id);
+                setSearchQuery("");
+                setPage(1);
+              } else {
+                // Has children or not checked yet - toggle expansion
+                toggleCategory(category.id);
+                // Always set as selected category
+                setSelectedCategory(category.id);
+                setSearchQuery(""); // Clear search when category is selected
+                setPage(1);
+              }
             }}
-            style={{ flex: 1 }}
+            style={{ flex: 1, cursor: "pointer" }}
           >
             {category.name}
           </a>
         </div>
         {isExpanded && hasChildren && (
-          <ul
-            className="cat-list"
-            style={{ marginLeft: `${marginLeft + 1}px`, marginTop: "5px" }}
-          >
-            {subCategories.map((subCat) => (
-              <CategoryItem
-                key={subCat.id}
-                category={subCat}
-                level={level + 1}
-                onSelect={onSelect}
-              />
-            ))}
+          <ul className="cat-list" style={{ marginLeft: "20px", marginTop: "5px" }}>
+            {subCategories
+              .filter((subCat, index, self) => 
+                index === self.findIndex((c) => c.id === subCat.id)
+              )
+              .map((subCat, index) => (
+                <li key={`${category.id}-${subCat.id}-${index}`}>
+                  <a
+                    href="#"
+                    className={selectedCategory === subCat.id ? "active" : ""}
+                    onClick={(e) => {
+                      e.preventDefault();
+                      setSelectedCategory(subCat.id);
+                      setSearchQuery(""); // Clear search when category is selected
+                      setPage(1);
+                    }}
+                  >
+                    {subCat.name}
+                  </a>
+                </li>
+              ))}
           </ul>
         )}
       </li>
     );
   };
 
+  // Reset page and products when filters change
+  useEffect(() => {
+    setPage(1);
+    setHasMore(true);
+    setProducts([]);
+  }, [selectedCategory, searchQuery, sortBy, minPrice, maxPrice, itemsPerPage]);
+
   useEffect(() => {
     const fetchData = async () => {
       try {
-        setLoading(true);
-        setSiteLoading(true);
+        // Only set main loading on first page or when filters change
+        if (page === 1) {
+          setLoading(true);
+        } else {
+          setLoadingMore(true);
+        }
         setApiFailed(false);
 
         const sortMap: Record<
@@ -237,17 +314,29 @@ function ProductsPageContent() {
         });
 
         const list = response?.products ?? [];
-        setProducts(list);
+        
+        if (page === 1) {
+          // First page - replace products
+          setProducts(list);
+        } else {
+          // Subsequent pages - append products
+          setProducts(prev => [...prev, ...list]);
+        }
+        
         setTotalPages(response.totalPages ?? 1);
-        setApiFailed(list.length === 0);
+        setHasMore(page < (response.totalPages ?? 1));
+        setApiFailed(list.length === 0 && page === 1);
       } catch (error) {
         console.error("Failed to fetch products:", error);
-        setProducts([]);
+        if (page === 1) {
+          setProducts([]);
+        }
         setTotalPages(1);
         setApiFailed(true);
+        setHasMore(false);
       } finally {
         setLoading(false);
-        setSiteLoading(false);
+        setLoadingMore(false);
       }
     };
 
@@ -262,228 +351,134 @@ function ProductsPageContent() {
     maxPrice,
   ]);
 
-  const renderFilterContent = (idSuffix: string, onCloseMenu?: () => void) => {
-    const handleCategoryAction = (fn: () => void) => {
-      fn();
-      onCloseMenu?.();
-    };
-    return (
-      <>
-        <div className="widget">
-          <h3 className="widget-title">
-            <a
-              href={`#widget-body-2${idSuffix}`}
-              role="button"
-              aria-expanded="true"
-              aria-controls={`widget-body-2${idSuffix}`}
-              onClick={(e) => {
-                e.preventDefault();
-                const target = document.getElementById(
-                  `widget-body-2${idSuffix}`,
-                );
-                if (target) target.classList.toggle("show");
-              }}
-            >
-              Categories
-            </a>
-          </h3>
-          <div
-            className="collapse show"
-            id={`widget-body-2${idSuffix}`}
-            style={{ display: "block" }}
-          >
-            <div className="widget-body">
-              <ul className="cat-list">
-                <li>
-                  <a
-                    href="#"
-                    className={selectedCategory === "" ? "active" : ""}
-                    onClick={(e) => {
-                      e.preventDefault();
-                      handleCategoryAction(() => {
-                        setSelectedCategory("");
-                        setSearchQuery("");
-                        setPage(1);
-                      });
-                    }}
-                  >
-                    All
-                  </a>
-                </li>
-                {topLevelCategories.length === 0 ? (
-                  <li>
-                    <span style={{ color: "#999", fontStyle: "italic" }}>
-                      No categories available
-                    </span>
-                  </li>
-                ) : (
-                  topLevelCategories.map((cat) => (
-                    <CategoryItem
-                      key={cat.id}
-                      category={cat}
-                      level={0}
-                      onSelect={onCloseMenu}
-                    />
-                  ))
-                )}
-              </ul>
-            </div>
-          </div>
-        </div>
-
-        <div className="widget widget-price">
-          <h3 className="widget-title">
-            <a
-              href={`#widget-body-3${idSuffix}`}
-              role="button"
-              aria-expanded="true"
-              aria-controls={`widget-body-3${idSuffix}`}
-              onClick={(e) => {
-                e.preventDefault();
-                const target = document.getElementById(
-                  `widget-body-3${idSuffix}`,
-                );
-                if (target) target.classList.toggle("show");
-              }}
-            >
-              Filter By Price
-            </a>
-          </h3>
-          <div
-            className="collapse show"
-            id={`widget-body-3${idSuffix}`}
-            style={{ display: "block" }}
-          >
-            <div className="widget-body">
-              <form
-                onSubmit={(e) => {
-                  e.preventDefault();
-                  setPage(1);
-                  onCloseMenu?.();
-                }}
-              >
-                <div
-                  className="price-slider-wrapper"
-                  style={{ marginBottom: "15px" }}
-                >
-                  <ReactSlider
-                    className="price-range-slider"
-                    thumbClassName="price-slider-thumb"
-                    trackClassName="price-slider-track"
-                    value={[minPrice, maxPrice]}
-                    onChange={(values: number[]) => {
-                      setMinPrice(values[0]);
-                      setMaxPrice(values[1]);
-                      setPage(1);
-                    }}
-                    min={0}
-                    max={10000}
-                    step={1}
-                    pearling
-                    minDistance={10}
-                  />
-                </div>
-                <div className="filter-price-action d-flex align-items-center justify-content-between flex-wrap pb-0">
-                  <div className="filter-price-text mb-1 mb-xl-0">
-                    Price:{" "}
-                    <span className="mr-3">
-                      ${minPrice} - ${maxPrice}
-                    </span>
-                  </div>
-                  <div className="d-flex gap-2 mb-2">
-                    <input
-                      type="number"
-                      className="form-control form-control-sm"
-                      placeholder="Min"
-                      value={minPrice}
-                      onChange={(e) => {
-                        setMinPrice(Math.max(0, Number(e.target.value) || 0));
-                        setPage(1);
-                      }}
-                      min={0}
-                    />
-                    <input
-                      type="number"
-                      className="form-control form-control-sm"
-                      placeholder="Max"
-                      value={maxPrice}
-                      onChange={(e) => {
-                        setMaxPrice(
-                          Math.min(10000, Number(e.target.value) || 1000),
-                        );
-                        setPage(1);
-                      }}
-                      min={0}
-                      max={10000}
-                    />
-                  </div>
-                  <button
-                    type="submit"
-                    className="btn btn-primary font2 mb-1 mb-xl-0"
-                  >
-                    Filter
-                  </button>
-                </div>
-              </form>
-            </div>
-          </div>
-        </div>
-      </>
+  // Intersection Observer for infinite scroll
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting && hasMore && !loading && !loadingMore) {
+          setPage(prev => prev + 1);
+        }
+      },
+      { threshold: 0.1 }
     );
-  };
+
+    const currentTarget = observerTarget.current;
+    if (currentTarget) {
+      observer.observe(currentTarget);
+    }
+
+    return () => {
+      if (currentTarget) {
+        observer.unobserve(currentTarget);
+      }
+    };
+  }, [hasMore, loading, loadingMore]);
 
   return (
     <>
-      <style
-        dangerouslySetInnerHTML={{
-          __html: `
+      <style dangerouslySetInnerHTML={{__html: `
+        .sidebar-shop .widget-title a:before,
+        .sidebar-shop .widget-title a:after {
+          content: none !important;
+          display: none !important;
+        }
         @media (min-width: 992px) {
-          .main .sidebar-shop .sidebar-wrapper,
-          .main .sidebar-shop .widget,
-          .main .sidebar-shop .widget-body,
-          .main .sidebar-shop .price-slider-wrapper {
+          .sidebar-shop.mobile-sidebar {
+            display: block !important;
+            position: sticky !important;
+            top: 20px !important;
+            align-self: flex-start !important;
+            transform: none !important;
+            visibility: visible !important;
+            opacity: 1 !important;
+            z-index: 1 !important;
+            width: 100% !important;
+            padding: 0 !important;
+            margin: 0 !important;
+            background-color: transparent !important;
+            max-height: calc(100vh - 40px) !important;
+            overflow-y: auto !important;
+          }
+          .sidebar-shop .sidebar-wrapper,
+          .sidebar-shop .widget,
+          .sidebar-shop .widget-body {
             display: block !important;
             visibility: visible !important;
             opacity: 1 !important;
           }
+          .sidebar-shop #widget-body-2.show,
+          .sidebar-shop #widget-body-3.show {
+            display: block !important;
+            visibility: visible !important;
+            opacity: 1 !important;
+          }
+          .sidebar-shop #widget-body-2:not(.show),
+          .sidebar-shop #widget-body-3:not(.show) {
+            display: none !important;
+          }
+          .sidebar-shop .price-slider-wrapper {
+            display: block !important;
+            visibility: visible !important;
+            opacity: 1 !important;
+            min-height: 40px !important;
+          }
         }
-      `,
-        }}
-      />
-      <main className="main">
-        <div className="category-banner-container bg-gray">
-          <div
-            className="category-banner banner text-uppercase"
-            style={{
-              background:
-                "no-repeat 60%/cover url('/assets/images/banners/banner-top.jpg')",
-            }}
-          >
-            <div className="container position-relative">
-              <div className="row">
-                <div className="pl-lg-5 pb-5 pb-md-0 col-md-5 col-xl-4 col-lg-4 offset-1">
-                  <h3>
-                    All<br></br>Products
-                  </h3>
-                  <Link href="/products" className="btn btn-dark">
-                    Shop Now
-                  </Link>
-                </div>
-                <div className="pl-lg-3 col-md-4 offset-md-0 offset-1 pt-3">
-                  <div className="coupon-sale-content">
-                    <h4 className="m-b-1 coupon-sale-text bg-white text-transform-none">
-                      Browse Collection
-                    </h4>
-                    <h5 className="mb-2 coupon-sale-text d-block ls-10 p-0">
-                      <i className="ls-0">Discover</i>
-                      <b className="text-dark"> great deals</b>
-                    </h5>
-                  </div>
+        @media (max-width: 991px) {
+          .sidebar-shop.mobile-sidebar {
+            position: fixed !important;
+            top: 0 !important;
+            left: 0 !important;
+            right: 0 !important;
+            bottom: 0 !important;
+            max-height: 100vh !important;
+            overflow-y: auto !important;
+          }
+          .sidebar-shop #widget-body-2.show,
+          .sidebar-shop #widget-body-3.show {
+            display: block !important;
+            visibility: visible !important;
+            opacity: 1 !important;
+          }
+          .sidebar-shop #widget-body-2:not(.show),
+          .sidebar-shop #widget-body-3:not(.show) {
+            display: none !important;
+          }
+        }
+      `}} />
+    <main className="main">
+      <div className="category-banner-container bg-gray">
+        <div
+          className="category-banner banner text-uppercase"
+          style={{
+            background:
+              "no-repeat 60%/cover url('/assets/images/banners/banner-top.jpg')",
+          }}
+        >
+          <div className="container position-relative">
+            <div className="row">
+              <div className="pl-lg-5 pb-5 pb-md-0 col-md-5 col-xl-4 col-lg-4 offset-1">
+                <h3>
+                  All<br></br>Products
+                </h3>
+                <Link href="/products" className="btn btn-dark">
+                  Shop Now
+                </Link>
+              </div>
+              <div className="pl-lg-3 col-md-4 offset-md-0 offset-1 pt-3">
+                <div className="coupon-sale-content">
+                  <h4 className="m-b-1 coupon-sale-text bg-white text-transform-none">
+                    Browse Collection
+                  </h4>
+                  <h5 className="mb-2 coupon-sale-text d-block ls-10 p-0">
+                    <i className="ls-0">Discover</i>
+                    <b className="text-dark"> great deals</b>
+                  </h5>
                 </div>
               </div>
             </div>
           </div>
         </div>
+      </div>
 
         <div className="container">
           <nav aria-label="breadcrumb" className="breadcrumb-nav">
@@ -537,13 +532,152 @@ function ProductsPageContent() {
             </div>
           )}
 
-          <div className="row main-content-wrapper mb-2 pb-2">
-            {/* Desktop sidebar: visible only on lg+ */}
-            <aside className="sidebar-shop col-lg-2 order-lg-first d-none d-lg-block">
-              <div className="sidebar-wrapper">
-                {renderFilterContent("", undefined)}
+        <div className="row main-content-wrapper mb-2 pb-2">
+          <aside
+            className={`sidebar-shop col-lg-2 order-lg-first mobile-sidebar ${sidebarOpen ? "sidebar-opened" : ""}`}
+            style={{ 
+              display: "block",
+              position: "sticky",
+              top: "20px",
+              alignSelf: "flex-start",
+              visibility: "visible",
+              opacity: 1,
+              transform: "none",
+              zIndex: 1,
+              maxHeight: "calc(100vh - 40px)",
+              overflowY: "auto"
+            }}
+          >
+            <div className="sidebar-wrapper">
+              <div className="widget">
+                <h3 className="widget-title">
+                  <a
+                    href="#widget-body-2"
+                    role="button"
+                    aria-expanded={categoriesExpanded}
+                    aria-controls="widget-body-2"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      setCategoriesExpanded(!categoriesExpanded);
+                    }}
+                    style={{ display: "flex", alignItems: "center", justifyContent: "space-between", textDecoration: "none", color: "inherit" }}
+                  >
+                    <span>Categories</span>
+                    <i className={`icon-${categoriesExpanded ? "minus" : "plus"}`} style={{ fontSize: "14px", color: "#000", fontWeight: "bold" }}></i>
+                  </a>
+                </h3>
+                <div className={`collapse ${categoriesExpanded ? "show" : ""}`} id="widget-body-2">
+                  <div className="widget-body">
+                    <ul className="cat-list">
+                      <li>
+                        <a
+                          href="#"
+                          className={selectedCategory === "" ? "active" : ""}
+                          onClick={(e) => {
+                            e.preventDefault();
+                            setSelectedCategory("");
+                            setSearchQuery(""); // Clear search when "All" is selected
+                            setPage(1);
+                          }}
+                        >
+                          All
+                        </a>
+                      </li>
+                      {topLevelCategories.length === 0 ? (
+                        <li>
+                          <span style={{ color: "#999", fontStyle: "italic" }}>
+                            No categories available
+                          </span>
+                        </li>
+                      ) : (
+                        topLevelCategories.map((cat) => (
+                          <CategoryItem key={cat.id} category={cat} />
+                        ))
+                      )}
+                    </ul>
+                  </div>
+                </div>
               </div>
-            </aside>
+
+              <div className="widget widget-price">
+                <h3 className="widget-title">
+                  <a
+                    href="#widget-body-3"
+                    role="button"
+                    aria-expanded={priceFilterExpanded}
+                    aria-controls="widget-body-3"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      setPriceFilterExpanded(!priceFilterExpanded);
+                    }}
+                    style={{ display: "flex", alignItems: "center", justifyContent: "space-between", textDecoration: "none", color: "inherit" }}
+                  >
+                    <span>Filter By Price</span>
+                    <i className={`icon-${priceFilterExpanded ? "minus" : "plus"}`} style={{ fontSize: "14px", color: "#000", fontWeight: "bold" }}></i>
+                  </a>
+                </h3>
+                <div className={`collapse ${priceFilterExpanded ? "show" : ""}`} id="widget-body-3">
+                  <div className="widget-body">
+                    <div className="price-slider-wrapper" style={{ marginBottom: "15px" }}>
+                      <ReactSlider
+                        className="price-range-slider"
+                        thumbClassName="price-slider-thumb"
+                        trackClassName="price-slider-track"
+                        value={[minPrice, maxPrice]}
+                        onChange={(values: number[]) => {
+                          setMinPrice(values[0]);
+                          setMaxPrice(values[1]);
+                          setPage(1);
+                        }}
+                        min={0}
+                        max={10000}
+                        step={1}
+                        pearling
+                        minDistance={10}
+                      />
+                    </div>
+                    <div className="filter-price-action d-flex align-items-center justify-content-between flex-wrap pb-0">
+                      <div className="filter-price-text mb-1 mb-xl-0">
+                        Price:{" "}
+                        <span id="filter-price-range" className="mr-3">
+                          ${minPrice} - ${maxPrice}
+                        </span>
+                      </div>
+                      <div className="d-flex gap-2 mb-2">
+                        <input
+                          type="number"
+                          className="form-control form-control-sm"
+                          placeholder="Min"
+                          value={minPrice}
+                          onChange={(e) => {
+                            setMinPrice(
+                              Math.max(0, Number(e.target.value) || 0),
+                            );
+                            setPage(1);
+                          }}
+                          min={0}
+                        />
+                        <input
+                          type="number"
+                          className="form-control form-control-sm"
+                          placeholder="Max"
+                          value={maxPrice}
+                          onChange={(e) => {
+                            setMaxPrice(
+                              Math.min(10000, Number(e.target.value) || 1000),
+                            );
+                            setPage(1);
+                          }}
+                          min={0}
+                          max={10000}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </aside>
 
             <div className="col-lg-10">
               <nav
@@ -650,151 +784,134 @@ function ProductsPageContent() {
                   </div>
                 </div>
 
-                <div className="toolbox-right">
-                  <div className="toolbox-item toolbox-show">
-                    <label>Show:</label>
-                    <div className="select-custom">
-                      <select
-                        name="count"
-                        className="form-control"
-                        value={itemsPerPage}
-                        onChange={(e) => {
-                          setItemsPerPage(Number(e.target.value));
-                          setPage(1); // Reset to first page when changing items per page
-                        }}
-                      >
-                        <option value="12">12</option>
-                        <option value="24">24</option>
-                        <option value="36">36</option>
-                      </select>
-                    </div>
-                  </div>
-{/* 
-                  <div className="toolbox-item layout-modes">
-                    <a
-                      href="#"
-                      className={`layout-btn btn-grid ${viewMode === "grid" ? "active" : ""}`}
-                      title="Grid"
-                      onClick={(e) => {
-                        e.preventDefault();
-                        setViewMode("grid");
-                      }}
-                    >
-                      <i className="icon-mode-grid"></i>
-                    </a>
-                    <a
-                      href="#"
-                      className={`layout-btn btn-list ${viewMode === "list" ? "active" : ""}`}
-                      title="List"
-                      onClick={(e) => {
-                        e.preventDefault();
-                        setViewMode("list");
-                      }}
-                    >
-                      <i className="icon-mode-list"></i>
-                    </a>
-                  </div> */}
+              <div className="toolbox-right">
+                <div className="toolbox-item layout-modes">
+                  <a
+                    href="#"
+                    className={`layout-btn btn-grid ${viewMode === "grid" ? "active" : ""}`}
+                    title="Grid"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      setViewMode("grid");
+                    }}
+                  >
+                    <i className="icon-mode-grid"></i>
+                  </a>
+                  <a
+                    href="#"
+                    className={`layout-btn btn-list ${viewMode === "list" ? "active" : ""}`}
+                    title="List"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      setViewMode("list");
+                    }}
+                  >
+                    <i className="icon-mode-list"></i>
+                  </a>
                 </div>
-              </nav>
+              </div>
+            </nav>
 
-              <div className="row products-body">
-                {loading ? null : products.length === 0 ? (
-                  <div className="col-12 text-center py-5">
-                    <p>No products found.</p>
-                  </div>
-                ) : (
+            <div className="row products-body">
+              {loading && products.length === 0 ? (
+                <div className="col-12 text-center py-5">
+                  <p>Loading products...</p>
+                </div>
+              ) : products.length === 0 ? (
+                <div className="col-12 text-center py-5">
+                  <p>No products found.</p>
+                </div>
+              ) : (
+                <>
                   <ProductGrid
                     products={products}
                     viewMode={viewMode}
                     columnClass="col-6 col-md-4 col-lg-3 col-xl-5col"
                   />
-                )}
-              </div>
-
-              <nav className="toolbox toolbox-pagination font2">
-                <div className="toolbox-item toolbox-show">
-                  <label>Show:</label>
-                  <div className="select-custom">
-                    <select
-                      name="count"
-                      className="form-control"
-                      value={itemsPerPage}
-                      onChange={(e) => {
-                        setItemsPerPage(Number(e.target.value));
-                        setPage(1);
-                      }}
-                    >
-                      <option value="12">12</option>
-                      <option value="24">24</option>
-                      <option value="36">36</option>
-                    </select>
-                  </div>
-                </div>
-                <ul className="pagination toolbox-item">
-                  <li className={`page-item ${page <= 1 ? "disabled" : ""}`}>
-                    <a
-                      className="page-link page-link-btn"
-                      href="#"
-                      onClick={(e) => {
-                        e.preventDefault();
-                        if (page > 1) setPage(page - 1);
-                      }}
-                    >
-                      <i className="icon-angle-left"></i>
-                    </a>
-                  </li>
-                  {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-                    const pageNum =
-                      Math.max(1, Math.min(totalPages - 4, page - 2)) + i;
-                    if (pageNum > totalPages) return null;
-                    return (
-                      <li
-                        key={pageNum}
-                        className={`page-item ${pageNum === page ? "active" : ""}`}
-                      >
-                        <a
-                          className="page-link"
-                          href="#"
-                          onClick={(e) => {
-                            e.preventDefault();
-                            setPage(pageNum);
-                          }}
-                        >
-                          {pageNum}{" "}
-                          {pageNum === page && (
-                            <span className="sr-only">(current)</span>
-                          )}
-                        </a>
-                      </li>
-                    );
-                  })}
-                  <li
-                    className={`page-item ${page >= totalPages ? "disabled" : ""}`}
-                  >
-                    <a
-                      className="page-link page-link-btn"
-                      href="#"
-                      onClick={(e) => {
-                        e.preventDefault();
-                        if (page < totalPages) setPage(page + 1);
-                      }}
-                    >
-                      <i className="icon-angle-right"></i>
-                    </a>
-                  </li>
-                </ul>
-              </nav>
+                  {/* Intersection observer target for infinite scroll */}
+                  <div ref={observerTarget} style={{ height: '20px', width: '100%' }} />
+                  {loadingMore && (
+                    <div className="col-12 text-center py-3">
+                      <p>Loading more products...</p>
+                    </div>
+                  )}
+                  {!hasMore && products.length > 0 && (
+                    <div className="col-12 text-center py-3">
+                      <p className="text-muted">No more products to load.</p>
+                    </div>
+                  )}
+                </>
+              )}
             </div>
-          </div>
 
-          <ProductsFilterMenu
-            isOpen={sidebarOpen}
-            onClose={() => setSidebarOpen(false)}
-          >
-            {renderFilterContent("-mobile", () => setSidebarOpen(false))}
-          </ProductsFilterMenu>
+            {/* Pagination hidden - using infinite scroll instead */}
+            <nav className="toolbox toolbox-pagination font2" style={{ display: 'none' }}>
+              <ul className="pagination toolbox-item">
+                <li className={`page-item ${page <= 1 ? "disabled" : ""}`}>
+                  <a
+                    className="page-link page-link-btn"
+                    href="#"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      if (page > 1) setPage(page - 1);
+                    }}
+                  >
+                    <i className="icon-angle-left"></i>
+                  </a>
+                </li>
+                {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                  const pageNum =
+                    Math.max(1, Math.min(totalPages - 4, page - 2)) + i;
+                  if (pageNum > totalPages) return null;
+                  return (
+                    <li
+                      key={pageNum}
+                      className={`page-item ${pageNum === page ? "active" : ""}`}
+                    >
+                      <a
+                        className="page-link"
+                        href="#"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          setPage(pageNum);
+                        }}
+                      >
+                        {pageNum}{" "}
+                        {pageNum === page && (
+                          <span className="sr-only">(current)</span>
+                        )}
+                      </a>
+                    </li>
+                  );
+                })}
+                <li
+                  className={`page-item ${page >= totalPages ? "disabled" : ""}`}
+                >
+                  <a
+                    className="page-link page-link-btn"
+                    href="#"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      if (page < totalPages) setPage(page + 1);
+                    }}
+                  >
+                    <i className="icon-angle-right"></i>
+                  </a>
+                </li>
+              </ul>
+            </nav>
+          </div>
         </div>
-      </main>
+
+        <div
+          className="sidebar-overlay"
+          onClick={() => setSidebarOpen(false)}
+          aria-hidden="true"
+        />
+      </div>
+
+      <ProductCollections categoryId={selectedCategory || randomCategoryId || undefined} />
+    </main>
     </>
   );
 }

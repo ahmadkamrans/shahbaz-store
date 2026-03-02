@@ -1,23 +1,23 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { useParams } from "next/navigation";
-import Link from "next/link";
-import Image from "next/image";
-import toast from "react-hot-toast";
-import { Swiper, SwiperSlide } from "swiper/react";
-import { Thumbs, FreeMode } from "swiper/modules";
-import "swiper/css";
-import "swiper/css/thumbs";
-import "swiper/css/free-mode";
-import { Product } from "@/types";
-import { formatPrice } from "@/lib/utils";
-import { useCart } from "@/lib/store/cart-store";
-import { useWishlist } from "@/lib/store/wishlist-store";
-import { useSiteLoading } from "@/lib/loading-context";
-import { productsApi } from "@/lib/api/products";
-import { reviewsApi, Review } from "@/lib/api/reviews";
-import { getAuthToken } from "@/lib/api/config";
+import { useState, useEffect } from 'react';
+import { useParams } from 'next/navigation';
+import Link from 'next/link';
+import Image from 'next/image';
+import toast from 'react-hot-toast';
+import { Swiper, SwiperSlide } from 'swiper/react';
+import { Thumbs, FreeMode } from 'swiper/modules';
+import 'swiper/css';
+import 'swiper/css/thumbs';
+import 'swiper/css/free-mode';
+import { Product } from '@/types';
+import { formatPrice } from '@/lib/utils';
+import { useCart } from '@/lib/store/cart-store';
+import { useWishlist } from '@/lib/store/wishlist-store';
+import { productsApi } from '@/lib/api/products';
+import { reviewsApi, Review } from '@/lib/api/reviews';
+import { getAuthToken } from '@/lib/api/config';
+import { ProductCollections } from '@/components/product/ProductCollections';
 
 export default function ProductDetailPage() {
   const params = useParams();
@@ -338,12 +338,12 @@ export default function ProductDetailPage() {
         comment: reviewForm.comment.trim(),
         images: [], // Include images field with empty array
       });
-      // Refresh reviews
+      // Refresh reviews (only approved reviews will show)
       const reviewsData = await reviewsApi.getProductReviews(product.id);
       setReviews(reviewsData);
-      setReviewForm({ rating: 5, title: "", comment: "" });
-      toast.success("Review submitted successfully!", {
-        icon: "⭐",
+      setReviewForm({ rating: 5, title: '', comment: '' });
+      toast.success('Review submitted successfully! It will be visible after admin approval.', {
+        icon: '⭐',
       });
     } catch (error: any) {
       toast.error(error.message || "Failed to submit review");
@@ -588,7 +588,7 @@ export default function ProductDetailPage() {
                 <div className="product-ratings">
                   <span
                     className="ratings"
-                    style={{ width: `${(product?.rating ?? 0) * 20}%` }}
+                    style={{ width: `${(product.rating || 0) * 20}%`, color: '#ffc107' }}
                   ></span>
                   <span className="tooltiptext tooltip-top"></span>
                 </div>
@@ -1223,10 +1223,7 @@ export default function ProductDetailPage() {
                             </h4>
                             <div className="ratings-container">
                               <div className="product-ratings">
-                                <span
-                                  className="ratings"
-                                  style={{ width: `${review.rating * 20}%` }}
-                                ></span>
+                                <span className="ratings" style={{ width: `${review.rating * 20}%`, color: '#ffc107' }}></span>
                               </div>
                             </div>
                             <span className="review-date">
@@ -1321,6 +1318,10 @@ export default function ProductDetailPage() {
           </div>
         </div>
       </div>
+
+      {product?.categoryInfo?.id && (
+        <ProductCollections categoryId={product.categoryInfo.id} />
+      )}
     </main>
   );
 }

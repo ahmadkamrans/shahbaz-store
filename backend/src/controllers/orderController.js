@@ -84,7 +84,7 @@ export const getOrders = async (req, res, next) => {
     const { page, limit, skip } = getPaginationParams(req.query, 20, 100);
 
     const orders = await Order.find(query)
-      .populate('user', 'name email phone')
+      .populate('user', 'name email phone address')
       .populate('items.product', 'name slug images')
       .populate('discountCode', 'code type value')
       .sort({ createdAt: -1 })
@@ -124,7 +124,7 @@ export const getOrder = async (req, res, next) => {
     const order = await Order.findOne(query)
       .populate('items.product', 'name slug images price')
       .populate('discountCode', 'code type value')
-      .populate('user', 'name email');
+      .populate('user', 'name email phone address');
 
     if (!order) {
       throw new AppError('Order not found', 404);
@@ -142,7 +142,7 @@ export const createOrder = async (req, res, next) => {
   session.startTransaction();
 
   try {
-    const { items, discountCode, shippingAddress } = req.body;
+    const { items, discountCode, billingAddress, shippingAddress } = req.body;
 
     if (!items || items.length === 0) {
       throw new AppError('Order must contain at least one item', 400);
@@ -282,15 +282,43 @@ export const createOrder = async (req, res, next) => {
 
     // Ensure discount doesn't exceed total amount
     const finalAmount = Math.max(0, totalAmount - discountAmount);
+    
+    // Calculate delivery charges
+    let deliveryChargesAmount = 0;
+    if (req.body.deliveryCharges !== undefined) {
+      deliveryChargesAmount = req.body.deliveryCharges;
+    }
 
     // Create order within transaction
     const createdOrder = new Order({
       user: req.user._id,
       items: orderItems,
-      totalAmount: finalAmount,
+      totalAmount: finalAmount + deliveryChargesAmount,
       discountCode: discountCodeDoc?._id,
       discountAmount,
-      shippingAddress: shippingAddress || req.user.address
+      deliveryCharges: deliveryChargesAmount,
+      billingAddress: billingAddress || {
+        street: req.user.address?.street || '',
+        city: req.user.address?.city || '',
+        state: req.user.address?.state || '',
+        zipCode: req.user.address?.zipCode || '',
+        country: req.user.address?.country || '',
+        phone: req.user.phone || '',
+        email: req.user.email || '',
+        firstName: req.user.name?.split(' ')[0] || '',
+        lastName: req.user.name?.split(' ').slice(1).join(' ') || '',
+      },
+      shippingAddress: shippingAddress || billingAddress || {
+        street: req.user.address?.street || '',
+        city: req.user.address?.city || '',
+        state: req.user.address?.state || '',
+        zipCode: req.user.address?.zipCode || '',
+        country: req.user.address?.country || '',
+        phone: req.user.phone || '',
+        email: req.user.email || '',
+        firstName: req.user.name?.split(' ')[0] || '',
+        lastName: req.user.name?.split(' ').slice(1).join(' ') || '',
+      }
     });
     await createdOrder.save({ session });
 
@@ -342,7 +370,7 @@ export const createOrder = async (req, res, next) => {
 
     // Send confirmation email (outside transaction)
     try {
-      await createdOrder.populate('user', 'email name');
+      await createdOrder.populate('user', 'email name phone address');
       await sendEmail(
         createdOrder.user.email,
         'Order Confirmation',
@@ -578,7 +606,7 @@ export const updateOrderStatus = async (req, res, next) => {
     // Populate order for response
     await order.populate('items.product', 'name slug images price');
     await order.populate('discountCode', 'code type value');
-    await order.populate('user', 'name email');
+    await order.populate('user', 'name email phone address');
 
     res.json({
       success: true,

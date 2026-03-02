@@ -15,12 +15,27 @@ export interface CreateOrderData {
     price: number;
     selectedVariant?: any;
   }>;
-  shippingAddress: {
+  billingAddress?: {
+    firstName?: string;
+    lastName?: string;
     street: string;
     city: string;
     state: string;
     zipCode: string;
     country: string;
+    phone?: string;
+    email?: string;
+  };
+  shippingAddress: {
+    firstName?: string;
+    lastName?: string;
+    street: string;
+    city: string;
+    state: string;
+    zipCode: string;
+    country: string;
+    phone?: string;
+    email?: string;
   };
   discountCode?: string;
 }
@@ -37,13 +52,29 @@ export interface Order {
     value: number;
   };
   discountAmount: number;
+  deliveryCharges?: number;
   status: 'pending' | 'confirmed' | 'shipped' | 'delivered' | 'cancelled';
-  shippingAddress: {
+  billingAddress?: {
+    firstName?: string;
+    lastName?: string;
     street: string;
     city: string;
     state: string;
     zipCode: string;
     country: string;
+    phone?: string;
+    email?: string;
+  };
+  shippingAddress: {
+    firstName?: string;
+    lastName?: string;
+    street: string;
+    city: string;
+    state: string;
+    zipCode: string;
+    country: string;
+    phone?: string;
+    email?: string;
   };
   createdAt: string;
   updatedAt: string;

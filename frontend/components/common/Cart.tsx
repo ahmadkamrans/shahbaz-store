@@ -27,14 +27,14 @@ export function Cart({ isOpen, onToggle }: CartProps) {
       <a
         href="#"
         title="Cart"
-        className="dropdown-toggle dropdown-arrow cart-toggle"
+        className="dropdown-toggle dropdown-arrow cart-toggle header-icon"
         role="button"
         onClick={(e) => {
           e.preventDefault();
           onToggle();
         }}
       >
-        <i className="minicart-icon"></i>
+        <i className="icon-cart-thick"></i>
         {isMounted && <span className="cart-count badge-circle">{items.length}</span>}
       </a>
 

@@ -9,7 +9,8 @@ import {
   getPopularProducts,
   getShareData,
   getProductsForComparison,
-  getProductByBarcode
+  getProductByBarcode,
+  getProductCollections
 } from '../controllers/productController.js';
 import { authenticate, authorize } from '../middleware/auth.js';
 import { validate, productSchema } from '../utils/validators.js';
@@ -18,6 +19,7 @@ import upload from '../config/multer.js';
 const router = express.Router();
 
 router.get('/', getProducts);
+router.get('/collections', getProductCollections);
 router.get('/popular', getPopularProducts);
 router.get('/compare', getProductsForComparison);
 router.get('/barcode/:barcode', getProductByBarcode);

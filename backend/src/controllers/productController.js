@@ -1,3 +1,4 @@
+import mongoose from 'mongoose';
 import Product from '../models/Product.js';
 import Review from '../models/Review.js';
 import Analytics from '../models/Analytics.js';
@@ -834,6 +835,189 @@ export const getProductByBarcode = async (req, res, next) => {
     res.json({
       success: true,
       product
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// Helper function to get all descendant category IDs
+const getAllDescendantIdsForCollections = async (categoryId) => {
+  const Category = (await import('../models/Category.js')).default;
+  const categoryIds = [categoryId];
+  const getChildren = async (parentId) => {
+    const children = await Category.find({ 
+      parent: parentId,
+      isActive: true 
+    }).select('_id').lean();
+    
+    for (const child of children) {
+      categoryIds.push(child._id);
+      await getChildren(child._id); // Recursively get nested children
+    }
+  };
+  
+  await getChildren(categoryId);
+  return categoryIds;
+};
+
+// Helper function to get a random category
+export const getRandomCategory = async () => {
+  try {
+    const Category = (await import('../models/Category.js')).default;
+    const categories = await Category.find({ isActive: true })
+      .select('_id')
+      .lean();
+    
+    if (categories.length === 0) return null;
+    
+    const randomIndex = Math.floor(Math.random() * categories.length);
+    return categories[randomIndex]._id.toString();
+  } catch (error) {
+    console.error('Error getting random category:', error);
+    return null;
+  }
+};
+
+// Get product collections (featured, bestSelling, latest, topRated)
+export const getProductCollections = async (req, res, next) => {
+  try {
+    const { type, category, limit = 4 } = req.query;
+    const validatedLimit = Math.min(parseInt(limit) || 4, 20);
+    
+    // Validate type
+    const validTypes = ['featured', 'bestSelling', 'latest', 'topRated'];
+    if (!type || !validTypes.includes(type)) {
+      throw new AppError(`Invalid collection type. Must be one of: ${validTypes.join(', ')}`, 400);
+    }
+    
+    // Validate category if provided
+    if (category && !isValidObjectId(category)) {
+      throw new AppError('Invalid category ID format', 400);
+    }
+
+    let query = { isActive: true };
+    let categoryIds = [];
+    
+    // Add category filter (including child categories)
+    if (category) {
+      categoryIds = await getAllDescendantIdsForCollections(category);
+      // If we have multiple categories, use $in, otherwise use direct match
+      if (categoryIds.length > 1) {
+        query.category = { $in: categoryIds };
+      } else {
+        query.category = categoryIds[0];
+      }
+    }
+
+    let products = [];
+
+    switch (type) {
+      case 'featured':
+        products = await Product.find({ ...query, featured: true })
+          .populate('category', 'name slug')
+          .sort({ createdAt: -1 })
+          .limit(validatedLimit)
+          .lean();
+        break;
+
+      case 'bestSelling':
+        // Aggregate from Order items to get total quantity sold
+        const Order = (await import('../models/Order.js')).default;
+        const bestSellingAggregation = await Order.aggregate([
+          {
+            $match: {
+              status: { $in: ['confirmed', 'shipped', 'delivered'] }
+            }
+          },
+          {
+            $unwind: '$items'
+          },
+          {
+            $group: {
+              _id: '$items.product',
+              totalSold: { $sum: '$items.quantity' }
+            }
+          },
+          {
+            $sort: { totalSold: -1 }
+          },
+          {
+            $limit: validatedLimit * 3 // Get more to filter by category and active status
+          },
+          {
+            $lookup: {
+              from: 'products',
+              localField: '_id',
+              foreignField: '_id',
+              as: 'product'
+            }
+          },
+          {
+            $unwind: '$product'
+          },
+          {
+            $match: {
+              'product.isActive': true,
+              ...(category && categoryIds.length > 0 ? { 
+                'product.category': categoryIds.length > 1 
+                  ? { $in: categoryIds.map(id => new mongoose.Types.ObjectId(id)) }
+                  : new mongoose.Types.ObjectId(categoryIds[0])
+              } : {})
+            }
+          },
+          {
+            $limit: validatedLimit
+          },
+          {
+            $project: {
+              _id: '$product._id',
+              name: '$product.name',
+              slug: '$product.slug',
+              price: '$product.price',
+              image: '$product.image',
+              images: '$product.images',
+              averageRating: '$product.averageRating',
+              reviewCount: '$product.reviewCount',
+              category: '$product.category',
+              totalSold: 1
+            }
+          }
+        ]);
+        
+        // Populate category for each product
+        const Category = (await import('../models/Category.js')).default;
+        for (const item of bestSellingAggregation) {
+          if (item.category) {
+            const cat = await Category.findById(item.category).select('name slug').lean();
+            item.category = cat;
+          }
+        }
+        products = bestSellingAggregation;
+        break;
+
+      case 'latest':
+        products = await Product.find(query)
+          .populate('category', 'name slug')
+          .sort({ createdAt: -1 })
+          .limit(validatedLimit)
+          .lean();
+        break;
+
+      case 'topRated':
+        products = await Product.find(query)
+          .populate('category', 'name slug')
+          .sort({ averageRating: -1, reviewCount: -1 })
+          .limit(validatedLimit)
+          .lean();
+        break;
+    }
+
+    res.json({
+      success: true,
+      products,
+      type,
+      category: category || null
     });
   } catch (error) {
     next(error);

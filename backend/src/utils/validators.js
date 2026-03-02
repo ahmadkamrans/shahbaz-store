@@ -95,6 +95,41 @@ export const headerLinkSchema = Joi.object({
   // URL validation is done in the controller to access both url and openInNewTab fields
 });
 
+export const bannerSettingsSchema = Joi.object({
+  text: Joi.string().trim().min(1).required(),
+  linkText: Joi.string().trim().allow('').default('Shop Now!'),
+  linkUrl: Joi.string().trim().default('/products'),
+  isActive: Joi.boolean().default(true)
+});
+
+export const settingsSchema = Joi.object({
+  banner: Joi.object({
+    text: Joi.string().trim().min(1),
+    linkText: Joi.string().trim().allow(''),
+    linkUrl: Joi.string().trim(),
+    isActive: Joi.boolean()
+  }).optional(),
+  site: Joi.object({
+    name: Joi.string().trim(),
+    email: Joi.string().email().allow(''),
+    phone: Joi.string().trim().allow(''),
+    address: Joi.string().trim().allow('')
+  }).optional(),
+  social: Joi.object({
+    facebook: Joi.string().uri().allow(''),
+    instagram: Joi.string().uri().allow(''),
+    twitter: Joi.string().uri().allow('')
+  }).optional(),
+  seo: Joi.object({
+    metaTitle: Joi.string().trim().allow(''),
+    metaDescription: Joi.string().trim().allow('')
+  }).optional(),
+  deliveryCharges: Joi.object({
+    amount: Joi.number().min(0).default(0),
+    freeDeliveryThreshold: Joi.number().min(0).default(0)
+  }).optional()
+});
+
 export const orderItemSchema = Joi.object({
   product: Joi.string().required(),
   quantity: Joi.number().integer().min(1).required(),
@@ -114,13 +149,29 @@ export const orderItemSchema = Joi.object({
 export const orderSchema = Joi.object({
   items: Joi.array().items(orderItemSchema).min(1).required(),
   discountCode: Joi.string().trim().uppercase().allow('', null),
-  shippingAddress: Joi.object({
+  billingAddress: Joi.object({
+    firstName: Joi.string().trim().allow(''),
+    lastName: Joi.string().trim().allow(''),
     street: Joi.string().trim().allow(''),
     city: Joi.string().trim().allow(''),
     state: Joi.string().trim().allow(''),
     zipCode: Joi.string().trim().allow(''),
-    country: Joi.string().trim().allow('')
-  }).allow(null)
+    country: Joi.string().trim().allow(''),
+    phone: Joi.string().trim().allow(''),
+    email: Joi.string().email().trim().allow('')
+  }).allow(null),
+  shippingAddress: Joi.object({
+    firstName: Joi.string().trim().allow(''),
+    lastName: Joi.string().trim().allow(''),
+    street: Joi.string().trim().allow(''),
+    city: Joi.string().trim().allow(''),
+    state: Joi.string().trim().allow(''),
+    zipCode: Joi.string().trim().allow(''),
+    country: Joi.string().trim().allow(''),
+    phone: Joi.string().trim().allow(''),
+    email: Joi.string().email().trim().allow('')
+  }).allow(null),
+  deliveryCharges: Joi.number().min(0).default(0)
 });
 
 export const orderStatusSchema = Joi.object({

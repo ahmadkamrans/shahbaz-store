@@ -526,7 +526,7 @@ export function QuickViewModal({
                         <div className="product-ratings">
                           <span
                             className="ratings"
-                            style={{ width: `${(product.rating || 0) * 20}%` }}
+                            style={{ width: `${(product.rating || 0) * 20}%`, color: '#ffc107' }}
                           ></span>
                         </div>
                         {product.reviews !== undefined && (

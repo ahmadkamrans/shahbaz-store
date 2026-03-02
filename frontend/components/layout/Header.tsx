@@ -9,6 +9,7 @@ import { Search } from "../common/Search";
 import { MobileMenu } from "./MobileMenu";
 import { useCart } from "@/lib/store/cart-store";
 import { headerLinksApi, HeaderLink } from "@/lib/api/headerLinks";
+import { settingsApi, Settings } from "@/lib/api/settings";
 
 const DEFAULT_NAV_LINKS: HeaderLink[] = [
   { id: "home", label: "Home", url: "/", order: 0 },
@@ -23,6 +24,7 @@ export function Header() {
   const [activeMenu, setActiveMenu] = useState<string | null>(null);
   const [headerLinks, setHeaderLinks] = useState<HeaderLink[]>([]);
   const [linksLoading, setLinksLoading] = useState(true);
+  const [settings, setSettings] = useState<Settings | null>(null);
   const { initializeCart } = useCart();
 
   // Fetch header links from API
@@ -41,6 +43,21 @@ export function Header() {
     };
 
     fetchLinks();
+  }, []);
+
+  // Fetch settings (for banner)
+  useEffect(() => {
+    const fetchSettings = async () => {
+      try {
+        const siteSettings = await settingsApi.get();
+        setSettings(siteSettings);
+      } catch (error) {
+        console.error("Error fetching settings:", error);
+        setSettings(null);
+      }
+    };
+
+    fetchSettings();
   }, []);
 
   // Determine active page based on pathname
@@ -79,7 +96,7 @@ export function Header() {
   }, [mobileMenuOpen]);
 
   return (
-    <header className="header mb-2">
+    <header className={`header mb-2 ${settings?.banner?.isActive ? 'has-banner' : 'no-banner'}`}>
       <div
         className="header-middle sticky-header"
         style={{
@@ -199,15 +216,19 @@ export function Header() {
       </div>
       {/* End .header-middle */}
 
-      <div className="container mt-4">
-        <div className="header-bottom w-100">
-          <h4 className="mb-0 text-center pr-3 pl-3">
-            Get 10% OFF at the Shahbaz Kitchen Selection -{" "}
-            <Link href="/products">Shop Now!</Link>
-          </h4>
+      {settings?.banner?.isActive && (
+        <div className="container mt-4">
+          <div className="header-bottom w-100">
+            <h4 className="mb-0 text-center pr-3 pl-3">
+              {settings.banner.text}{" "}
+              <Link href={settings.banner.linkUrl || "/products"}>
+                {settings.banner.linkText || "Shop Now!"}
+              </Link>
+            </h4>
+          </div>
         </div>
-      </div>
-      {/* End .header-top */}
+      )}
+      {/* End .header-bottom */}
       <MobileMenu
         isOpen={mobileMenuOpen}
         onClose={() => setMobileMenuOpen(false)}

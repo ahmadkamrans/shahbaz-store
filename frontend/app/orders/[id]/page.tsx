@@ -158,9 +158,24 @@ export default function OrderDetailPage() {
                   <div className="col-md-6">
                     <h5>Shipping Address</h5>
                     <address>
+                      {(order.shippingAddress.firstName || order.shippingAddress.lastName) && (
+                        <>
+                          {order.shippingAddress.firstName} {order.shippingAddress.lastName}<br />
+                        </>
+                      )}
                       {order.shippingAddress.street}<br />
                       {order.shippingAddress.city}, {order.shippingAddress.state} {order.shippingAddress.zipCode}<br />
                       {order.shippingAddress.country}
+                      {order.shippingAddress.phone && (
+                        <>
+                          <br />Phone: {order.shippingAddress.phone}
+                        </>
+                      )}
+                      {order.shippingAddress.email && (
+                        <>
+                          <br />Email: {order.shippingAddress.email}
+                        </>
+                      )}
                     </address>
                   </div>
                 </div>
@@ -206,14 +221,6 @@ export default function OrderDetailPage() {
                     ))}
                   </tbody>
                   <tfoot>
-                    <tr>
-                      <td colSpan={3} className="text-right">
-                        <strong>Subtotal:</strong>
-                      </td>
-                      <td className="text-right">
-                        <strong>{formatPrice(order.totalAmount + order.discountAmount)}</strong>
-                      </td>
-                    </tr>
                     {order.discountAmount > 0 && (
                       <tr>
                         <td colSpan={3} className="text-right">
@@ -221,6 +228,16 @@ export default function OrderDetailPage() {
                         </td>
                         <td className="text-right text-success">
                           <strong>-{formatPrice(order.discountAmount)}</strong>
+                        </td>
+                      </tr>
+                    )}
+                    {order.deliveryCharges !== undefined && order.deliveryCharges > 0 && (
+                      <tr>
+                        <td colSpan={3} className="text-right">
+                          <strong>Delivery Charges:</strong>
+                        </td>
+                        <td className="text-right">
+                          <strong>{formatPrice(order.deliveryCharges)}</strong>
                         </td>
                       </tr>
                     )}

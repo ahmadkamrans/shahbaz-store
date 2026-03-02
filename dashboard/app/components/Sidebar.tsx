@@ -10,6 +10,7 @@ import {
   FaStar,
   FaPercent,
   FaLink,
+  FaCog,
   FaSignOutAlt,
 } from "react-icons/fa";
 import { useAuth } from "../../lib/auth/auth.context";
@@ -22,6 +23,7 @@ const menuItems = [
   { name: "Reviews", href: "/reviews", icon: FaStar },
   { name: "Discount Codes", href: "/discount-codes", icon: FaPercent },
   { name: "Header Links", href: "/header-links", icon: FaLink },
+  { name: "Settings", href: "/settings", icon: FaCog },
 ];
 
 export default function Sidebar() {

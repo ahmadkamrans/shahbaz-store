@@ -299,12 +299,76 @@ export default function OrdersClient({
               </div>
 
               <div>
-                <h3 className="font-semibold mb-2">Customer Information</h3>
-                <p>Name: {selectedOrder.customerName}</p>
-                <p>Email: {selectedOrder.customerEmail}</p>
-                {selectedOrder.customerPhone && (
-                  <p>Phone: {selectedOrder.customerPhone}</p>
-                )}
+                <h3 className="font-semibold mb-2">Billing Address</h3>
+                {(() => {
+                  // Use billingAddress if available and has address fields, otherwise fall back to user address
+                  const billingAddr = selectedOrder.billingAddress;
+                  const user = selectedOrder.user;
+                  const userAddress = user?.address;
+                  
+                  // Check if billingAddress has address fields, if not use user address
+                  const hasBillingAddress = billingAddr && (billingAddr.street || billingAddr.city);
+                  const displayAddress = hasBillingAddress ? billingAddr : (userAddress ? {
+                    firstName: user?.name?.split(' ')[0] || '',
+                    lastName: user?.name?.split(' ').slice(1).join(' ') || '',
+                    street: userAddress.street || '',
+                    city: userAddress.city || '',
+                    state: userAddress.state || '',
+                    zipCode: userAddress.zipCode || '',
+                    country: userAddress.country || '',
+                    phone: user?.phone || '',
+                    email: user?.email || '',
+                  } : null);
+                  
+                  if (displayAddress) {
+                    return (
+                      <>
+                        {(displayAddress.firstName || displayAddress.lastName) ? (
+                          <p className="font-medium">
+                            {displayAddress.firstName} {displayAddress.lastName}
+                          </p>
+                        ) : (
+                          <p className="font-medium">{selectedOrder.customerName || user?.name}</p>
+                        )}
+                        {displayAddress.street && (
+                          <p>
+                            {displayAddress.street}
+                            {displayAddress.city && `, ${displayAddress.city}`}
+                          </p>
+                        )}
+                        {(displayAddress.state || displayAddress.zipCode) && (
+                          <p>
+                            {displayAddress.state} {displayAddress.zipCode}
+                          </p>
+                        )}
+                        {displayAddress.country && (
+                          <p>{displayAddress.country}</p>
+                        )}
+                        {displayAddress.phone && (
+                          <p className="mt-1">
+                            <strong>Phone:</strong> {displayAddress.phone}
+                          </p>
+                        )}
+                        {displayAddress.email && (
+                          <p>
+                            <strong>Email:</strong> {displayAddress.email}
+                          </p>
+                        )}
+                      </>
+                    );
+                  } else {
+                    // Fallback to customer info if no address available
+                    return (
+                      <>
+                        <p>Name: {selectedOrder.customerName}</p>
+                        <p>Email: {selectedOrder.customerEmail}</p>
+                        {selectedOrder.customerPhone && (
+                          <p>Phone: {selectedOrder.customerPhone}</p>
+                        )}
+                      </>
+                    );
+                  }
+                })()}
               </div>
 
               <div>
@@ -370,6 +434,16 @@ export default function OrdersClient({
                         </tr>
                       </>
                     )}
+                    {selectedOrder.deliveryCharges !== undefined && selectedOrder.deliveryCharges > 0 && (
+                      <tr>
+                        <td colSpan={3} className="text-right py-2">
+                          Delivery Charges:
+                        </td>
+                        <td className="text-right py-2">
+                          {formatCurrency(selectedOrder.deliveryCharges)}
+                        </td>
+                      </tr>
+                    )}
                     <tr>
                       <td colSpan={3} className="text-right font-semibold py-2">
                         Total:
@@ -384,6 +458,11 @@ export default function OrdersClient({
 
               <div>
                 <h3 className="font-semibold mb-2">Shipping Address</h3>
+                {(selectedOrder.shippingAddress.firstName || selectedOrder.shippingAddress.lastName) && (
+                  <p className="font-medium">
+                    {selectedOrder.shippingAddress.firstName} {selectedOrder.shippingAddress.lastName}
+                  </p>
+                )}
                 <p>
                   {selectedOrder.shippingAddress.street},{" "}
                   {selectedOrder.shippingAddress.city}
@@ -393,6 +472,16 @@ export default function OrdersClient({
                   {selectedOrder.shippingAddress.zipCode}
                 </p>
                 <p>{selectedOrder.shippingAddress.country}</p>
+                {selectedOrder.shippingAddress.phone && (
+                  <p className="mt-1">
+                    <strong>Phone:</strong> {selectedOrder.shippingAddress.phone}
+                  </p>
+                )}
+                {selectedOrder.shippingAddress.email && (
+                  <p>
+                    <strong>Email:</strong> {selectedOrder.shippingAddress.email}
+                  </p>
+                )}
               </div>
 
               <div>

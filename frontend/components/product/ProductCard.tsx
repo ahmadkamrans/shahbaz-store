@@ -105,7 +105,7 @@ export function ProductCard({
             <div className="product-ratings">
               <span
                 className="ratings"
-                style={{ width: `${(product.rating || 0) * 20}%` }}
+                style={{ width: `${(product.rating || 0) * 20}%`, color: '#ffc107' }}
               />
               <span className="tooltiptext tooltip-top"></span>
             </div>
@@ -151,7 +151,7 @@ export function ProductCard({
           <div className="product-ratings">
             <span
               className="ratings"
-              style={{ width: `${(product.rating || 0) * 20}%` }}
+              style={{ width: `${(product.rating || 0) * 20}%`, color: '#ffc107' }}
             />
             <span className="tooltiptext tooltip-top"></span>
           </div>

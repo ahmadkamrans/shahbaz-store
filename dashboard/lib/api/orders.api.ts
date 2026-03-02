@@ -12,11 +12,15 @@ export interface OrderItem {
 }
 
 export interface ShippingAddress {
+  firstName?: string;
+  lastName?: string;
   street: string;
   city: string;
   state: string;
   zipCode: string;
   country: string;
+  phone?: string;
+  email?: string;
 }
 
 export interface Order {
@@ -32,7 +36,9 @@ export interface Order {
   total?: number;
   discountAmount?: number;
   discountCode?: { code: string; type: string; value: number };
+  deliveryCharges?: number;
   status: 'pending' | 'confirmed' | 'shipped' | 'delivered' | 'cancelled';
+  billingAddress?: BillingAddress;
   shippingAddress: ShippingAddress;
   paymentMethod?: string;
   createdAt?: string;
