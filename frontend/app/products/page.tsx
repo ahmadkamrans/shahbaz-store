@@ -176,7 +176,7 @@ function ProductsPageContent() {
   };
 
   // Category item component - all sub-categories shown at same level
-  const CategoryItem = ({ category }: { category: Category }) => {
+  const CategoryItem = ({ category, onSelect }: { category: Category; onSelect?: () => void }) => {
     const subCategories = categoryChildren[category.id] || [];
     const hasChildren = subCategories.length > 0;
     const isExpanded = expandedCategories.has(category.id);
@@ -217,18 +217,16 @@ function ProductsPageContent() {
               // Always toggle expansion (will fetch children if not already fetched)
               // Skip toggle only if we've confirmed there are no children
               if (hasCheckedForChildren && !hasChildren) {
-                // No children, just select the category
                 setSelectedCategory(category.id);
                 setSearchQuery("");
                 setPage(1);
               } else {
-                // Has children or not checked yet - toggle expansion
                 toggleCategory(category.id);
-                // Always set as selected category
                 setSelectedCategory(category.id);
-                setSearchQuery(""); // Clear search when category is selected
+                setSearchQuery("");
                 setPage(1);
               }
+              onSelect?.();
             }}
             style={{ flex: 1, cursor: "pointer" }}
           >
@@ -249,8 +247,9 @@ function ProductsPageContent() {
                     onClick={(e) => {
                       e.preventDefault();
                       setSelectedCategory(subCat.id);
-                      setSearchQuery(""); // Clear search when category is selected
+                      setSearchQuery("");
                       setPage(1);
+                      onSelect?.();
                     }}
                   >
                     {subCat.name}
@@ -269,6 +268,141 @@ function ProductsPageContent() {
     setHasMore(true);
     setProducts([]);
   }, [selectedCategory, searchQuery, sortBy, minPrice, maxPrice, itemsPerPage]);
+
+  const renderFilterContent = (idSuffix: string, onCloseMenu?: () => void) => (
+    <>
+      <div className="widget">
+        <h3 className="widget-title">
+          <a
+            href={`#widget-body-2${idSuffix}`}
+            role="button"
+            aria-expanded={categoriesExpanded}
+            aria-controls={`widget-body-2${idSuffix}`}
+            onClick={(e) => {
+              e.preventDefault();
+              setCategoriesExpanded(!categoriesExpanded);
+            }}
+            style={{ display: "flex", alignItems: "center", justifyContent: "space-between", textDecoration: "none", color: "inherit" }}
+          >
+            <span>Categories</span>
+            <i className={`icon-${categoriesExpanded ? "minus" : "plus"}`} style={{ fontSize: "14px", color: "#000", fontWeight: "bold" }}></i>
+          </a>
+        </h3>
+        <div className={`collapse ${categoriesExpanded ? "show" : ""}`} id={`widget-body-2${idSuffix}`}>
+          <div className="widget-body">
+            <ul className="cat-list">
+              <li>
+                <a
+                  href="#"
+                  className={selectedCategory === "" ? "active" : ""}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    setSelectedCategory("");
+                    setSearchQuery("");
+                    setPage(1);
+                    onCloseMenu?.();
+                  }}
+                >
+                  All
+                </a>
+              </li>
+              {topLevelCategories.length === 0 ? (
+                <li>
+                  <span style={{ color: "#999", fontStyle: "italic" }}>No categories available</span>
+                </li>
+              ) : (
+                topLevelCategories.map((cat) => (
+                  <CategoryItem key={cat.id} category={cat} onSelect={onCloseMenu} />
+                ))
+              )}
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <div className="widget widget-price">
+        <h3 className="widget-title">
+          <a
+            href={`#widget-body-3${idSuffix}`}
+            role="button"
+            aria-expanded={priceFilterExpanded}
+            aria-controls={`widget-body-3${idSuffix}`}
+            onClick={(e) => {
+              e.preventDefault();
+              setPriceFilterExpanded(!priceFilterExpanded);
+            }}
+            style={{ display: "flex", alignItems: "center", justifyContent: "space-between", textDecoration: "none", color: "inherit" }}
+          >
+            <span>Filter By Price</span>
+            <i className={`icon-${priceFilterExpanded ? "minus" : "plus"}`} style={{ fontSize: "14px", color: "#000", fontWeight: "bold" }}></i>
+          </a>
+        </h3>
+        <div className={`collapse ${priceFilterExpanded ? "show" : ""}`} id={`widget-body-3${idSuffix}`}>
+          <div className="widget-body">
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                setPage(1);
+                onCloseMenu?.();
+              }}
+            >
+              <div className="price-slider-wrapper" style={{ marginBottom: "15px" }}>
+                <ReactSlider
+                  className="price-range-slider"
+                  thumbClassName="price-slider-thumb"
+                  trackClassName="price-slider-track"
+                  value={[minPrice, maxPrice]}
+                  onChange={(values: number[]) => {
+                    setMinPrice(values[0]);
+                    setMaxPrice(values[1]);
+                    setPage(1);
+                  }}
+                  min={0}
+                  max={10000}
+                  step={1}
+                  pearling
+                  minDistance={10}
+                />
+              </div>
+              <div className="filter-price-action d-flex align-items-center justify-content-between flex-wrap pb-0">
+                <div className="filter-price-text mb-1 mb-xl-0">
+                  Price: <span className="mr-3">${minPrice} - ${maxPrice}</span>
+                </div>
+                <div className="d-flex gap-2 mb-2">
+                  <input
+                    type="number"
+                    className="form-control form-control-sm"
+                    placeholder="Min"
+                    value={minPrice}
+                    onChange={(e) => {
+                      setMinPrice(Math.max(0, Number(e.target.value) || 0));
+                      setPage(1);
+                    }}
+                    min={0}
+                  />
+                  <input
+                    type="number"
+                    className="form-control form-control-sm"
+                    placeholder="Max"
+                    value={maxPrice}
+                    onChange={(e) => {
+                      setMaxPrice(Math.min(10000, Number(e.target.value) || 1000));
+                      setPage(1);
+                    }}
+                    min={0}
+                    max={10000}
+                  />
+                </div>
+                <button type="submit" className="btn btn-primary font2 mb-1 mb-xl-0">
+                  Filter
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+    </>
+  );
 
   useEffect(() => {
     const fetchData = async () => {
@@ -383,65 +517,13 @@ function ProductsPageContent() {
           display: none !important;
         }
         @media (min-width: 992px) {
-          .sidebar-shop.mobile-sidebar {
-            display: block !important;
-            position: sticky !important;
-            top: 20px !important;
-            align-self: flex-start !important;
-            transform: none !important;
-            visibility: visible !important;
-            opacity: 1 !important;
-            z-index: 1 !important;
-            width: 100% !important;
-            padding: 0 !important;
-            margin: 0 !important;
-            background-color: transparent !important;
-            max-height: calc(100vh - 40px) !important;
-            overflow-y: auto !important;
-          }
-          .sidebar-shop .sidebar-wrapper,
-          .sidebar-shop .widget,
-          .sidebar-shop .widget-body {
+          .main .sidebar-shop .sidebar-wrapper,
+          .main .sidebar-shop .widget,
+          .main .sidebar-shop .widget-body,
+          .main .sidebar-shop .price-slider-wrapper {
             display: block !important;
             visibility: visible !important;
             opacity: 1 !important;
-          }
-          .sidebar-shop #widget-body-2.show,
-          .sidebar-shop #widget-body-3.show {
-            display: block !important;
-            visibility: visible !important;
-            opacity: 1 !important;
-          }
-          .sidebar-shop #widget-body-2:not(.show),
-          .sidebar-shop #widget-body-3:not(.show) {
-            display: none !important;
-          }
-          .sidebar-shop .price-slider-wrapper {
-            display: block !important;
-            visibility: visible !important;
-            opacity: 1 !important;
-            min-height: 40px !important;
-          }
-        }
-        @media (max-width: 991px) {
-          .sidebar-shop.mobile-sidebar {
-            position: fixed !important;
-            top: 0 !important;
-            left: 0 !important;
-            right: 0 !important;
-            bottom: 0 !important;
-            max-height: 100vh !important;
-            overflow-y: auto !important;
-          }
-          .sidebar-shop #widget-body-2.show,
-          .sidebar-shop #widget-body-3.show {
-            display: block !important;
-            visibility: visible !important;
-            opacity: 1 !important;
-          }
-          .sidebar-shop #widget-body-2:not(.show),
-          .sidebar-shop #widget-body-3:not(.show) {
-            display: none !important;
           }
         }
       `}} />
@@ -533,149 +615,10 @@ function ProductsPageContent() {
           )}
 
         <div className="row main-content-wrapper mb-2 pb-2">
-          <aside
-            className={`sidebar-shop col-lg-2 order-lg-first mobile-sidebar ${sidebarOpen ? "sidebar-opened" : ""}`}
-            style={{ 
-              display: "block",
-              position: "sticky",
-              top: "20px",
-              alignSelf: "flex-start",
-              visibility: "visible",
-              opacity: 1,
-              transform: "none",
-              zIndex: 1,
-              maxHeight: "calc(100vh - 40px)",
-              overflowY: "auto"
-            }}
-          >
+          {/* Desktop sidebar: visible only on lg+ */}
+          <aside className="sidebar-shop col-lg-2 order-lg-first d-none d-lg-block">
             <div className="sidebar-wrapper">
-              <div className="widget">
-                <h3 className="widget-title">
-                  <a
-                    href="#widget-body-2"
-                    role="button"
-                    aria-expanded={categoriesExpanded}
-                    aria-controls="widget-body-2"
-                    onClick={(e) => {
-                      e.preventDefault();
-                      setCategoriesExpanded(!categoriesExpanded);
-                    }}
-                    style={{ display: "flex", alignItems: "center", justifyContent: "space-between", textDecoration: "none", color: "inherit" }}
-                  >
-                    <span>Categories</span>
-                    <i className={`icon-${categoriesExpanded ? "minus" : "plus"}`} style={{ fontSize: "14px", color: "#000", fontWeight: "bold" }}></i>
-                  </a>
-                </h3>
-                <div className={`collapse ${categoriesExpanded ? "show" : ""}`} id="widget-body-2">
-                  <div className="widget-body">
-                    <ul className="cat-list">
-                      <li>
-                        <a
-                          href="#"
-                          className={selectedCategory === "" ? "active" : ""}
-                          onClick={(e) => {
-                            e.preventDefault();
-                            setSelectedCategory("");
-                            setSearchQuery(""); // Clear search when "All" is selected
-                            setPage(1);
-                          }}
-                        >
-                          All
-                        </a>
-                      </li>
-                      {topLevelCategories.length === 0 ? (
-                        <li>
-                          <span style={{ color: "#999", fontStyle: "italic" }}>
-                            No categories available
-                          </span>
-                        </li>
-                      ) : (
-                        topLevelCategories.map((cat) => (
-                          <CategoryItem key={cat.id} category={cat} />
-                        ))
-                      )}
-                    </ul>
-                  </div>
-                </div>
-              </div>
-
-              <div className="widget widget-price">
-                <h3 className="widget-title">
-                  <a
-                    href="#widget-body-3"
-                    role="button"
-                    aria-expanded={priceFilterExpanded}
-                    aria-controls="widget-body-3"
-                    onClick={(e) => {
-                      e.preventDefault();
-                      setPriceFilterExpanded(!priceFilterExpanded);
-                    }}
-                    style={{ display: "flex", alignItems: "center", justifyContent: "space-between", textDecoration: "none", color: "inherit" }}
-                  >
-                    <span>Filter By Price</span>
-                    <i className={`icon-${priceFilterExpanded ? "minus" : "plus"}`} style={{ fontSize: "14px", color: "#000", fontWeight: "bold" }}></i>
-                  </a>
-                </h3>
-                <div className={`collapse ${priceFilterExpanded ? "show" : ""}`} id="widget-body-3">
-                  <div className="widget-body">
-                    <div className="price-slider-wrapper" style={{ marginBottom: "15px" }}>
-                      <ReactSlider
-                        className="price-range-slider"
-                        thumbClassName="price-slider-thumb"
-                        trackClassName="price-slider-track"
-                        value={[minPrice, maxPrice]}
-                        onChange={(values: number[]) => {
-                          setMinPrice(values[0]);
-                          setMaxPrice(values[1]);
-                          setPage(1);
-                        }}
-                        min={0}
-                        max={10000}
-                        step={1}
-                        pearling
-                        minDistance={10}
-                      />
-                    </div>
-                    <div className="filter-price-action d-flex align-items-center justify-content-between flex-wrap pb-0">
-                      <div className="filter-price-text mb-1 mb-xl-0">
-                        Price:{" "}
-                        <span id="filter-price-range" className="mr-3">
-                          ${minPrice} - ${maxPrice}
-                        </span>
-                      </div>
-                      <div className="d-flex gap-2 mb-2">
-                        <input
-                          type="number"
-                          className="form-control form-control-sm"
-                          placeholder="Min"
-                          value={minPrice}
-                          onChange={(e) => {
-                            setMinPrice(
-                              Math.max(0, Number(e.target.value) || 0),
-                            );
-                            setPage(1);
-                          }}
-                          min={0}
-                        />
-                        <input
-                          type="number"
-                          className="form-control form-control-sm"
-                          placeholder="Max"
-                          value={maxPrice}
-                          onChange={(e) => {
-                            setMaxPrice(
-                              Math.min(10000, Number(e.target.value) || 1000),
-                            );
-                            setPage(1);
-                          }}
-                          min={0}
-                          max={10000}
-                        />
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
+              {renderFilterContent("", undefined)}
             </div>
           </aside>
 
@@ -903,11 +846,12 @@ function ProductsPageContent() {
           </div>
         </div>
 
-        <div
-          className="sidebar-overlay"
-          onClick={() => setSidebarOpen(false)}
-          aria-hidden="true"
-        />
+        <ProductsFilterMenu
+          isOpen={sidebarOpen}
+          onClose={() => setSidebarOpen(false)}
+        >
+          {renderFilterContent("-mobile", () => setSidebarOpen(false))}
+        </ProductsFilterMenu>
       </div>
 
       <ProductCollections categoryId={selectedCategory || randomCategoryId || undefined} />
