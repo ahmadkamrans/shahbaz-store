@@ -13268,6 +13268,12 @@ footer a {
     padding-bottom: 2.4rem
 }
 
+@media (max-width: 768px) {
+    .footer-middle {
+        padding-top: 3.5rem !important;
+    }
+}
+
 .footer-bottom {
     border-top: 1px solid #e1e1e1;
     padding-bottom: 2.5rem;

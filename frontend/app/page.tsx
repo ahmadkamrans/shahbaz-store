@@ -18,7 +18,12 @@ import { formatCurrency } from "@/lib/utils/currency";
 import { settingsApi, Settings } from "@/lib/api/settings";
 
 export default function HomePage() {
-  const { addItem: addToWishlist, removeItem, isInWishlist, fetchWishlist } = useWishlist();
+  const {
+    addItem: addToWishlist,
+    removeItem,
+    isInWishlist,
+    fetchWishlist,
+  } = useWishlist();
   const { addItem: addToCart } = useCart();
   const [categories, setCategories] = useState<Category[]>([]);
   const { setLoading: setSiteLoading } = useSiteLoading();
@@ -27,7 +32,9 @@ export default function HomePage() {
     Record<string, Product[]>
   >({});
   const [loading, setLoading] = useState(true);
-  const [categoryIdsByTab, setCategoryIdsByTab] = useState<Record<string, string>>({});
+  const [categoryIdsByTab, setCategoryIdsByTab] = useState<
+    Record<string, string>
+  >({});
   const [quickViewProduct, setQuickViewProduct] = useState<Product | null>(
     null,
   );
@@ -78,12 +85,15 @@ export default function HomePage() {
         // Fetch categories dynamically
         const fetchedCategories = await categoriesApi.getCategories();
         // Filter only top-level categories (no parent)
-        const topLevelCategories = fetchedCategories.filter(cat => !cat.parentId);
+        const topLevelCategories = fetchedCategories.filter(
+          (cat) => !cat.parentId,
+        );
         setCategories(topLevelCategories);
 
         // Set first category as active tab
         if (topLevelCategories.length > 0) {
-          const firstCategorySlug = topLevelCategories[0].slug || topLevelCategories[0].id;
+          const firstCategorySlug =
+            topLevelCategories[0].slug || topLevelCategories[0].id;
           setActiveTab(firstCategorySlug);
         }
 
@@ -93,7 +103,7 @@ export default function HomePage() {
 
         for (const category of topLevelCategories) {
           const tabKey = category.slug || category.id;
-          
+
           try {
             // Get products from this category
             const result = await productsApi.getProducts({
@@ -104,7 +114,10 @@ export default function HomePage() {
             productsByCategory[tabKey] = result.products || [];
             categoryIdsByTab[tabKey] = category.id;
           } catch (error) {
-            console.error(`Failed to fetch products for ${category.name}:`, error);
+            console.error(
+              `Failed to fetch products for ${category.name}:`,
+              error,
+            );
             productsByCategory[tabKey] = [];
           }
         }
@@ -123,7 +136,7 @@ export default function HomePage() {
   }, []);
 
   return (
-    <main className={`home main ${!settings?.banner?.isActive ? 'mt-10' : ''}`}>
+    <main className={`home main ${!settings?.banner?.isActive ? "mt-10" : ""}`}>
       <div className="container">
         <section>
           <div className="row grid">
@@ -249,12 +262,28 @@ export default function HomePage() {
         <hr className="mt-0" />
 
         <section className="featured-section product-slider-tab appear-animate">
-          <div className="heading d-flex align-items-center justify-content-center mt-5 mb-5" style={{ overflowX: 'auto', width: '100%' }}>
-            <ul className="nav product-filter-items mb-0" style={{ display: 'flex', flexWrap: 'nowrap', gap: '1.5rem', padding: '0 1rem' }}>
+          <div
+            className="heading d-flex align-items-center justify-content-center mt-5 mb-5"
+            style={{ overflowX: "auto", width: "100%" }}
+          >
+            <ul
+              className="nav product-filter-items mb-0"
+              style={{
+                display: "flex",
+                flexWrap: "nowrap",
+                gap: "1.5rem",
+                padding: "0 1rem",
+                maxWidth: "100%",
+              }}
+            >
               {categories.map((category) => {
                 const tabKey = category.slug || category.id;
                 return (
-                  <li key={category.id} className="nav-item product-filter-item" style={{ flexShrink: 0 }}>
+                  <li
+                    key={category.id}
+                    className="nav-item product-filter-item"
+                    style={{ flexShrink: 0 }}
+                  >
                     <a
                       href="#"
                       className={`nav-link ${activeTab === tabKey ? "active" : ""}`}
@@ -262,7 +291,13 @@ export default function HomePage() {
                         e.preventDefault();
                         setActiveTab(tabKey);
                       }}
-                      style={{ cursor: 'pointer', userSelect: 'none', fontSize: '2rem', fontWeight: '600', whiteSpace: 'nowrap' }}
+                      style={{
+                        cursor: "pointer",
+                        userSelect: "none",
+                        fontSize: "2rem",
+                        fontWeight: "600",
+                        whiteSpace: "nowrap",
+                      }}
                     >
                       {category.name.toUpperCase()}
                     </a>
@@ -293,11 +328,12 @@ export default function HomePage() {
                       <>
                         <ProductCarousel products={products} />
                         {categoryId && (
-                          <Link 
+                          <Link
                             href={`/products?category=${categoryId}`}
                             className="btn with-icon align-center font2"
                           >
-                            Browse All<i className="fas fa-long-arrow-alt-right"></i>
+                            Browse All
+                            <i className="fas fa-long-arrow-alt-right"></i>
                           </Link>
                         )}
                       </>
