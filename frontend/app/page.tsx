@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { HomeBanner } from "@/components/banners/HomeBanner";
+import { PromotionCarousel } from "@/components/banners/PromotionCarousel";
 import { ProductCarousel } from "@/components/product/ProductCarousel";
 import { QuickViewModal } from "@/components/product/QuickViewModal";
 import { ProductCollections } from "@/components/product/ProductCollections";
@@ -213,6 +214,8 @@ export default function HomePage() {
             <div className="col-1 pr-0 pl-0 grid-col-sizer"></div>
           </div>
         </section>
+
+        <PromotionCarousel heading="Special Promotions" />
 
         <section className="info-box-container mb-0 appear-animate">
           <div className="row">

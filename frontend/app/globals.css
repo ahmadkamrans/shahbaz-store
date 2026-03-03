@@ -94,6 +94,44 @@ body {
   opacity: 1 !important;
 }
 
+/* Promotion carousel - 3 slides on desktop, 1 on mobile */
+.promotion-carousel {
+  width: 100%;
+}
+
+.promotion-carousel__swiper {
+  padding-bottom: 2.5rem;
+}
+
+.promotion-carousel__slide {
+  display: block;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.promotion-carousel__figure {
+  margin: 0;
+  position: relative;
+  overflow: hidden;
+  border-radius: 4px;
+}
+
+.promotion-carousel__img {
+  width: 100%;
+  height: auto;
+  object-fit: cover;
+  display: block;
+}
+
+.promotion-carousel__swiper .swiper-button-prev,
+.promotion-carousel__swiper .swiper-button-next {
+  color: #700e77;
+}
+
+.promotion-carousel__swiper .swiper-pagination-bullet-active {
+  background: #700e77;
+}
+
 /* Product detail: quantity input and Add to Cart same height */
 .product-detail-quantity-input,
 .product-detail-add-cart {
@@ -1440,10 +1478,12 @@ body.mmenu-active .sticky-navbar.fixed {
   text-align: left;
   width: 100%;
 }
+
 .contact-us-container .card.card-accordion .accordion-panel {
   padding: 0;
   min-height: 0;
 }
+
 .contact-us-container .card.card-accordion .accordion-panel p {
   padding: 1.3rem 0 0.4rem 0;
   margin-bottom: 0;
